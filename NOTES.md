@@ -36,10 +36,10 @@ The September 2025 Anthropic Economic Index report provides several results that
 
 ## Data Inventory
 
--Two CSV files are used in this project.
--The 1P API file is 6.70 MB and has 33,794 rows. The Claude.ai file is 18.02 MB and has 100,062 rows.
--Both files have the same 10 columns and the same data types.
--The 1P API data has no missing values. The Claude.ai data has a small amount of missing data in `geo_id` (0.02%) and `cluster_name` (0.45%).
+- Two CSV files are used in this project.
+- The 1P API file is 6.70 MB and has 33,794 rows. The Claude.ai file is 18.02 MB and has 100,062 rows.
+- Both files have the same 10 columns and the same data types.
+- The 1P API data has no missing values. The Claude.ai data has a small amount of missing data in `geo_id` (0.02%) and `cluster_name` (0.45%).
 
 ## Raw Data Examples
 
