@@ -42,4 +42,7 @@ The September 2025 Anthropic Economic Index report provides several results that
 - The 1P API data has no missing values. The Claude.ai data has a small amount of missing data in `geo_id` (0.02%) and `cluster_name` (0.45%).
 
 ## Raw Data Examples
+I checked five rows from the 1P API data and five rows from the Claude.ai data.
+In the API data, the rows show different collaboration types such as directive, feedback loop, and learning. The data includes both counts and percentages for these types.
+In the Claude.ai data, I also saw collaboration types such as task iteration and not classified. Each row gives information about a specific category and metric, not an individual user or conversation.
 
