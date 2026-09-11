@@ -9,6 +9,8 @@
 - Download date: September 11, 2026
 - License: Creative Commons Attribution 4.0 (CC BY 4.0)
 - Research question: Do consumers and businesses use AI differently on the same tasks?
+- Paper citation: arXiv:2503.04761 [cs.CY]
+- DOI: https://doi.org/10.48550/arXiv.2503.04761
   
 ## Dataset Summary
 
