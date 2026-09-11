@@ -7,7 +7,7 @@ Anthropic Economic Index
 Do consumers and businesses use AI differently on the same tasks?
 
 ## Project Description
-nalyzing consumer and business AI usage patterns using the Anthropic Economic Index.
+Analyzing consumer and business AI usage patterns using the Anthropic Economic Index.
 ## Sources
 - Dataset: [Anthropic Economic Index Dataset](https://huggingface.co/datasets/Anthropic/EconomicIndex)
 - Paper: [Which Economic Tasks are Performed with AI? Evidence from Millions of Claude Conversations](https://arxiv.org/pdf/2503.04761)
