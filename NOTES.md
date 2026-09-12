@@ -34,6 +34,7 @@ The September 2025 Anthropic Economic Index report provides several results that
 - Augmentation accounts for 12% of API use.
 - In the API data, 97% of tasks are mainly used for automation, while this percentage is 47% for Claude.ai.
 
+My results are very close to the report. I found 77.37% automation and 12.41% augmentation in the 1P API data. The report shows about 77% automation and 12% augmentation. This means my results match the verification targets.
 ## Data Inventory
 
 - Two CSV files are used in this project.
