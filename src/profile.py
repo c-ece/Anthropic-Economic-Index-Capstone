@@ -149,3 +149,242 @@ plt.tight_layout()
 
 plt.savefig("figures/collaboration_types.png", bbox_inches="tight")
 plt.close()
+
+# SAME-TASK ANALYSIS
+
+task1 = "advise clients on how they could be helped by counseling"
+
+api_task1 = api[
+    (api["facet"] == "onet_task::collaboration") &
+    (api["variable"] == "onet_task_collaboration_pct") &
+    (api["cluster_name"].str.startswith(task1, na=False))
+]
+pd.set_option("display.max_colwidth", None)
+print("\nAPI - Counseling Task:")
+for _, row in api_task1.iterrows():
+    print(row["cluster_name"], "=", round(row["value"], 2), "%")
+
+    # Counseling task - Claude.ai
+claude_task1 = claude[
+    (claude["geography"] == "global") &
+    (claude["facet"] == "onet_task::collaboration") &
+    (claude["variable"] == "onet_task_collaboration_pct") &
+    (claude["cluster_name"].str.startswith(task1, na=False))
+]
+print("\nClaude.ai - Counseling Task:")
+for _, row in claude_task1.iterrows():
+    print(row["cluster_name"], "=", round(row["value"], 2), "%")
+
+
+    # Automation and Augmentation for Counseling Task
+api_task1_automation = api_task1[
+    api_task1["cluster_name"].str.endswith(
+        ("::directive", "::feedback loop"), na=False
+    )
+]["value"].sum()
+
+api_task1_augmentation = api_task1[
+    api_task1["cluster_name"].str.endswith(
+        ("::learning", "::task iteration", "::validation"), na=False
+    )
+]["value"].sum()
+
+claude_task1_automation = claude_task1[
+    claude_task1["cluster_name"].str.endswith(
+        ("::directive", "::feedback loop"), na=False
+    )
+]["value"].sum()
+
+claude_task1_augmentation = claude_task1[
+    claude_task1["cluster_name"].str.endswith(
+        ("::learning", "::task iteration", "::validation"), na=False
+    )
+]["value"].sum()
+
+print("\nCounseling Task Comparison:")
+print("API Automation:", round(api_task1_automation, 2), "%")
+print("API Augmentation:", round(api_task1_augmentation, 2), "%")
+print("Claude.ai Automation:", round(claude_task1_automation, 2), "%")
+print("Claude.ai Augmentation:", round(claude_task1_augmentation, 2), "%")
+plt.savefig(
+    "figures/counseling_task_comparison.png",
+    bbox_inches="tight"
+)
+# Counseling Task Comparison Graph
+
+categories = ["Automation", "Augmentation"]
+
+api_task1_values = [
+    api_task1_automation,
+    api_task1_augmentation
+]
+
+claude_task1_values = [
+    claude_task1_automation,
+    claude_task1_augmentation
+]
+
+x = np.arange(len(categories))
+width = 0.35
+
+plt.figure(figsize=(8, 5))
+
+bars1 = plt.bar(
+    x - width/2,
+    claude_task1_values,
+    width,
+    label="Claude.ai"
+)
+
+bars2 = plt.bar(
+    x + width/2,
+    api_task1_values,
+    width,
+    label="1P API"
+)
+
+plt.ylabel("Percentage (%)")
+plt.title("Counseling Task: Claude.ai vs 1P API")
+plt.xticks(x, categories)
+plt.ylim(0, 80)
+plt.legend()
+
+for bars in [bars1, bars2]:
+    for bar in bars:
+        value = bar.get_height()
+        plt.text(
+            bar.get_x() + bar.get_width()/2,
+            value + 1,
+            f"{value:.1f}%",
+            ha="center"
+        )
+
+plt.tight_layout()
+
+plt.savefig(
+    "figures/counseling_task_comparison.png",
+    bbox_inches="tight"
+)
+
+plt.close()
+
+# SECOND SAME-TASK ANALYSIS
+# Risk and Investment Task
+
+task2 = "analyze and classify risks and investments to determine their potential impacts on companies."
+
+# API
+api_task2 = api[
+    (api["facet"] == "onet_task::collaboration") &
+    (api["variable"] == "onet_task_collaboration_pct") &
+    (api["cluster_name"].str.startswith(task2, na=False))
+]
+
+print("\nAPI - Risk and Investment Task:")
+
+for _, row in api_task2.iterrows():
+    print(row["cluster_name"], "=", round(row["value"], 2), "%")
+
+
+# Claude.ai
+claude_task2 = claude[
+    (claude["geography"] == "global") &
+    (claude["facet"] == "onet_task::collaboration") &
+    (claude["variable"] == "onet_task_collaboration_pct") &
+    (claude["cluster_name"].str.startswith(task2, na=False))
+]
+
+print("\nClaude.ai - Risk and Investment Task:")
+
+for _, row in claude_task2.iterrows():
+    print(row["cluster_name"], "=", round(row["value"], 2), "%")
+
+# Automation and Augmentation for Risk and Investment Task
+
+api_task2_automation = api_task2[
+    api_task2["cluster_name"].str.endswith(
+        ("::directive", "::feedback loop"), na=False
+    )
+]["value"].sum()
+
+api_task2_augmentation = api_task2[
+    api_task2["cluster_name"].str.endswith(
+        ("::learning", "::task iteration", "::validation"), na=False
+    )
+]["value"].sum()
+
+claude_task2_automation = claude_task2[
+    claude_task2["cluster_name"].str.endswith(
+        ("::directive", "::feedback loop"), na=False
+    )
+]["value"].sum()
+
+claude_task2_augmentation = claude_task2[
+    claude_task2["cluster_name"].str.endswith(
+        ("::learning", "::task iteration", "::validation"), na=False
+    )
+]["value"].sum()
+
+print("\nRisk and Investment Task Comparison:")
+print("API Automation:", round(api_task2_automation, 2), "%")
+print("API Augmentation:", round(api_task2_augmentation, 2), "%")
+print("Claude.ai Automation:", round(claude_task2_automation, 2), "%")
+print("Claude.ai Augmentation:", round(claude_task2_augmentation, 2), "%")
+
+# Risk and Investment Task Comparison Graph
+
+categories = ["Automation", "Augmentation"]
+
+api_task2_values = [
+    api_task2_automation,
+    api_task2_augmentation
+]
+
+claude_task2_values = [
+    claude_task2_automation,
+    claude_task2_augmentation
+]
+
+x = np.arange(len(categories))
+width = 0.35
+
+plt.figure(figsize=(8, 5))
+
+bars1 = plt.bar(
+    x - width/2,
+    claude_task2_values,
+    width,
+    label="Claude.ai"
+)
+
+bars2 = plt.bar(
+    x + width/2,
+    api_task2_values,
+    width,
+    label="1P API"
+)
+
+plt.ylabel("Percentage (%)")
+plt.title("Risk and Investment Task: Claude.ai vs 1P API")
+plt.xticks(x, categories)
+plt.ylim(0, 105)
+plt.legend()
+
+for bars in [bars1, bars2]:
+    for bar in bars:
+        value = bar.get_height()
+        plt.text(
+            bar.get_x() + bar.get_width()/2,
+            value + 1,
+            f"{value:.1f}%",
+            ha="center"
+        )
+
+plt.tight_layout()
+
+plt.savefig(
+    "figures/risk_investment_task_comparison.png",
+    bbox_inches="tight"
+)
+
+plt.close()
