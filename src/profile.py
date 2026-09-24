@@ -479,3 +479,31 @@ if p_value < 0.05:
     print("=> This supports H1: API automation % is systematically higher than Claude.ai.")
 else:
     print("=> p >= 0.05, not enough evidence to reject H0.")
+
+# =============================================================================
+# HISTOGRAM: distribution of the difference (API - Claude.ai) across all tasks
+# =============================================================================
+
+plt.figure(figsize=(9, 5))
+
+plt.hist(comparison["diff"], bins=30, color="#2E86AB", edgecolor="white")
+
+# Draw a vertical line at the mean, so we can see where the average sits
+mean_diff = comparison["diff"].mean()
+plt.axvline(mean_diff, color="red", linestyle="--", linewidth=2,
+            label=f"Mean = {mean_diff:.1f} pp")
+
+# Draw a vertical line at 0, so we can see how far we are from "no difference"
+plt.axvline(0, color="black", linestyle="-", linewidth=1,
+            label="No difference (0)")
+
+plt.xlabel("Difference in Automation % (API - Claude.ai)")
+plt.ylabel("Number of Tasks")
+plt.title("Distribution of Automation Gap Across 1,193 Matched Tasks")
+plt.legend()
+plt.tight_layout()
+
+plt.savefig("figures/automation_gap_histogram.png", bbox_inches="tight")
+plt.close()
+
+print("\nHistogram saved to figures/automation_gap_histogram.png")

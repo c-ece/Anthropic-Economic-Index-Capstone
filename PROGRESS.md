@@ -63,3 +63,9 @@ The gap is large and statistically significant across nearly the full task
 set, not just the two examples from Week 3. Next steps: test whether the
 gap size depends on occupation wage/complexity (H2) and whether it changes
 across later data releases (H3).
+
+To visualize this result, I also plotted a histogram of the diff values
+across all 1,193 matched tasks (`figures/automation_gap_histogram.png`).
+Almost all tasks fall on the positive side (API higher than Claude.ai), and
+the distribution is roughly bell-shaped around the mean, which supports the
+assumptions behind the paired t-test.

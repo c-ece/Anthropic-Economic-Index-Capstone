@@ -52,13 +52,13 @@ These two examples show that Claude.ai and the 1P API can have different collabo
 
 These results are based on only two selected tasks, so more tasks need to be analyzed before making a general conclusion.
 
-## Research Question (Q3)
+## Hypotheses
+
 Do consumers (Claude.ai) and businesses (1P API) use AI differently on the
 same tasks? Specifically, I wanted to know whether businesses lean more
 toward full automation while individual users lean more toward augmentation,
 even when working on the exact same O*NET task.
 
-## Hypotheses
 
 | | Statement |
 |---|---|
@@ -116,3 +116,17 @@ Both are planned for the next phase, once the newer release's schema
 (Jun 2026) is harmonized — it stores this information differently
 (pre-computed `collaboration_bucket_automation_pct` metric instead of raw
 collaboration-type rows).
+
+## Distribution of the Automation Gap
+
+![Automation Gap Distribution](figures/automation_gap_histogram.png)
+
+The histogram above shows the difference in automation percentage
+(API − Claude.ai) for all 1,193 matched tasks. Almost all tasks fall to the
+right of zero, meaning the API automation share is higher than Claude.ai's
+for nearly every task, not just on average. The distribution is roughly
+bell-shaped and centered near the mean (31.0 pp), which supports using a
+paired t-test — the test assumes the differences are roughly normally
+distributed. The small number of tasks on the left side (negative values)
+represent the few cases where Claude.ai had a higher automation share than
+the API.
