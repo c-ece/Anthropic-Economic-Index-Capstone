@@ -388,3 +388,94 @@ plt.savefig(
 )
 
 plt.close()
+
+# =============================================================================
+# ALL-TASKS ANALYSIS (this replaces doing task1, task2, task3... one by one)
+# =============================================================================
+
+# Step 1: Take ALL rows that are task-level collaboration data (same filter
+# you already used for api_task1 / claude_task1, but WITHOUT picking one task)
+api_all_tasks = api[
+    (api["facet"] == "onet_task::collaboration") &
+    (api["variable"] == "onet_task_collaboration_pct")
+].copy()
+
+claude_all_tasks = claude[
+    (claude["geography"] == "global") &
+    (claude["facet"] == "onet_task::collaboration") &
+    (claude["variable"] == "onet_task_collaboration_pct")
+].copy()
+
+# Step 2: cluster_name looks like "task text::directive"
+# We split it into two columns: task name, and collaboration type
+api_all_tasks[["task", "collab_type"]] = api_all_tasks["cluster_name"].str.rsplit(
+    "::", n=1, expand=True
+)
+claude_all_tasks[["task", "collab_type"]] = claude_all_tasks["cluster_name"].str.rsplit(
+    "::", n=1, expand=True
+)
+
+# Step 3: label each row as "automation" or "augmentation"
+# (this is the same rule you used with .isin(...) for automation/augmentation)
+def bucket_collab_type(ct):
+    if ct in ["directive", "feedback loop"]:
+        return "automation"
+    elif ct in ["learning", "task iteration", "validation"]:
+        return "augmentation"
+    else:
+        return None  # not_classified / none -> we drop these
+
+api_all_tasks["bucket"] = api_all_tasks["collab_type"].apply(bucket_collab_type)
+claude_all_tasks["bucket"] = claude_all_tasks["collab_type"].apply(bucket_collab_type)
+
+api_all_tasks = api_all_tasks.dropna(subset=["bucket"])
+claude_all_tasks = claude_all_tasks.dropna(subset=["bucket"])
+
+# Step 4: for each task, sum up the automation % and augmentation %
+# groupby("task") = "do this separately for every unique task"
+# unstack() = turn the automation/augmentation rows into two columns
+api_summary = (
+    api_all_tasks.groupby(["task", "bucket"])["value"].sum().unstack(fill_value=0)
+)
+claude_summary = (
+    claude_all_tasks.groupby(["task", "bucket"])["value"].sum().unstack(fill_value=0)
+)
+
+api_summary = api_summary.rename(columns={"automation": "automation_api"})
+claude_summary = claude_summary.rename(columns={"automation": "automation_claude"})
+
+# Step 5: merge API and Claude.ai side by side, matched on the SAME task
+comparison = api_summary[["automation_api"]].merge(
+    claude_summary[["automation_claude"]], left_index=True, right_index=True
+)
+
+# Step 6: compute the difference for every task
+comparison["diff"] = comparison["automation_api"] - comparison["automation_claude"]
+
+print(f"\nNumber of matched tasks: {len(comparison)}")
+print(comparison.head(10))
+print(f"\nMean difference (API - Claude.ai): {comparison['diff'].mean():.2f} pp")
+print(f"Median difference: {comparison['diff'].median():.2f} pp")
+
+# =============================================================================
+# HYPOTHESIS TEST (H1): is API automation % systematically higher than
+# Claude.ai automation %, across all tasks, or could this be random noise?
+# =============================================================================
+
+from scipy import stats
+
+# Paired t-test: compares the two columns task-by-task (paired), and tests
+# whether the API column is *greater* than the Claude.ai column on average.
+t_stat, p_value = stats.ttest_rel(
+    comparison["automation_api"],
+    comparison["automation_claude"],
+    alternative="greater",
+)
+
+print(f"\nPaired t-test: t = {t_stat:.3f}, p = {p_value:.3e}")
+
+if p_value < 0.05:
+    print("=> p < 0.05, so we reject H0: the difference is statistically significant.")
+    print("=> This supports H1: API automation % is systematically higher than Claude.ai.")
+else:
+    print("=> p >= 0.05, not enough evidence to reject H0.")
