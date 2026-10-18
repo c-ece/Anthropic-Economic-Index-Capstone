@@ -1,5 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
+import statsmodels.formula.api as smf
 
 api = pd.read_csv("data/aei_raw_1p_api_2025-08-04_to_2025-08-11.csv")
 
@@ -507,3 +509,136 @@ plt.savefig("figures/automation_gap_histogram.png", bbox_inches="tight")
 plt.close()
 
 print("\nHistogram saved to figures/automation_gap_histogram.png")
+
+negative = comparison[comparison["diff"] < 0].sort_values("diff")
+print(f"\nNegative tasks: {len(negative)} of {len(comparison)} "
+      f"({len(negative) / len(comparison) * 100:.1f}%)")
+print(negative[["automation_api", "automation_claude", "diff"]].to_string())
+
+# =============================================================================
+# REGRESSION MODEL - STEP 1: BUILD THE DATASET (one row per task x platform)
+# =============================================================================
+COLLAB_TYPES = ["directive", "feedback loop", "learning", "task iteration", "validation"]
+AUTOMATION = ["directive", "feedback loop"]
+AUGMENTATION = ["learning", "task iteration", "validation"]
+
+
+def build_platform_table(df, platform_name):
+    """Return one row per task with collaboration shares and usage volume."""
+    if "geography" in df.columns:
+        df = df[df["geography"] == "global"]
+
+    # collaboration shares per task
+    collab_rows = df[
+        (df["facet"] == "onet_task::collaboration")
+        & (df["variable"] == "onet_task_collaboration_pct")
+    ].copy()
+    collab_rows[["task", "collab_type"]] = collab_rows["cluster_name"].str.rsplit(
+        "::", n=1, expand=True
+    )
+
+    # one column per collaboration type
+    shares = collab_rows.pivot_table(
+        index="task", columns="collab_type", values="value", aggfunc="sum", fill_value=0
+    )
+    for col in COLLAB_TYPES + ["none", "not_classified"]:
+        if col not in shares.columns:
+            shares[col] = 0.0
+
+    out = pd.DataFrame(index=shares.index)
+    for col in COLLAB_TYPES:
+        out[col] = shares[col]
+    out["automation_pct"] = shares[AUTOMATION].sum(axis=1)
+    out["augmentation_pct"] = shares[AUGMENTATION].sum(axis=1)
+    out["unclassified_pct"] = shares[["none", "not_classified"]].sum(axis=1)
+
+    # usage volume = number of conversations for the task
+    counts = df[(df["facet"] == "onet_task") & (df["variable"] == "onet_task_count")]
+    counts = counts.set_index("cluster_name")["value"]
+    out["volume"] = counts.reindex(out.index)
+
+    out["platform"] = platform_name
+    out["api"] = 1 if platform_name == "1P API" else 0   # dummy variable
+    return out.reset_index()
+
+
+api_tab = build_platform_table(api, "1P API")
+claude_tab = build_platform_table(claude, "Claude.ai")
+
+
+# keep tasks observed on BOTH platforms with some classified conversations
+def classified_tasks(tab):
+    return set(tab.loc[tab["automation_pct"] + tab["augmentation_pct"] > 0, "task"])
+
+
+matched = classified_tasks(api_tab) & classified_tasks(claude_tab)
+
+panel = pd.concat([api_tab, claude_tab], ignore_index=True)
+panel = panel[panel["task"].isin(matched)].dropna(subset=["volume"])
+panel = panel[panel["task"].map(panel["task"].value_counts()) == 2]
+panel["log_volume"] = np.log(panel["volume"])
+
+print(f"\nObservations: {len(panel)}  ({panel['task'].nunique()} tasks x 2 platforms)")
+print(panel.groupby("platform")[["automation_pct", "unclassified_pct", "volume"]].mean().round(2))
+
+# =============================================================================
+# REGRESSION MODEL - STEP 2: MAIN MODEL
+#   automation_pct = b0 + b1*api + b2*log_volume + e
+# =============================================================================
+# Standard errors are clustered by task, because the two rows of the same
+# task (API and Claude.ai) are not independent observations.
+task_groups = pd.factorize(panel["task"])[0]
+
+main_model = smf.ols("automation_pct ~ api + log_volume", data=panel).fit(
+    cov_type="cluster", cov_kwds={"groups": task_groups}
+)
+
+print("\n" + "=" * 70)
+print("MAIN MODEL:  automation_pct = b0 + b1*api + b2*log_volume + e")
+print("=" * 70)
+print(main_model.summary())
+
+# =============================================================================
+# REGRESSION MODEL - STEP 3: ROBUSTNESS CHECKS
+# Does the api coefficient stay the same when we add more controls?
+# =============================================================================
+# automation as a share of CLASSIFIED conversations only (for model 5)
+panel["automation_norm"] = 100 * panel["automation_pct"] / (
+    panel["automation_pct"] + panel["augmentation_pct"]
+)
+
+
+def fit(formula):
+    """OLS with standard errors clustered by task."""
+    return smf.ols(formula, data=panel).fit(
+        cov_type="cluster", cov_kwds={"groups": task_groups}
+    )
+
+
+models = {
+    "(1) api only":          fit("automation_pct ~ api"),
+    "(2) + log_volume":      fit("automation_pct ~ api + log_volume"),
+    "(3) + unclassified":    fit("automation_pct ~ api + log_volume + unclassified_pct"),
+    "(4) task FE":           fit("automation_pct ~ api + log_volume + C(task)"),
+    "(5) normalized y + FE": fit("automation_norm ~ api + log_volume + C(task)"),
+}
+
+# comparison table: only the variables we care about (not the 1,192 task dummies)
+rows = ["api", "log_volume", "unclassified_pct", "Intercept"]
+results = pd.DataFrame(index=rows + ["R-squared", "N"])
+for name, m in models.items():
+    col = {}
+    for var in rows:
+        if var in m.params and not (var == "Intercept" and "C(task)" in m.model.formula):
+            stars = "***" if m.pvalues[var] < 0.01 else "**" if m.pvalues[var] < 0.05 else "*" if m.pvalues[var] < 0.1 else ""
+            col[var] = f"{m.params[var]:.3f}{stars}"
+        else:
+            col[var] = ""
+    col["R-squared"] = f"{m.rsquared:.3f}"
+    col["N"] = f"{int(m.nobs)}"
+    results[name] = pd.Series(col)
+
+print("\n" + "=" * 70)
+print("ROBUSTNESS CHECKS (clustered SE by task; *** p<0.01, ** p<0.05, * p<0.1)")
+print("=" * 70)
+print(results.to_string())

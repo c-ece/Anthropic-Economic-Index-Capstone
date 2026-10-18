@@ -38,7 +38,7 @@ also holds at the single-task level:
 These two examples suggested the aggregate pattern holds at the task level
 too, motivating a formal test across *all* matched tasks.
 
-### Week 4 — Hypothesis Formulation & First Test (H1)
+### Week 4-5 — Hypothesis Formulation & First Test (H1)
 Formulated the hypotheses for Q3:
 - **H0:** No difference in automation share between API and Claude.ai for
   the same task (`mean(diff) = 0`).
@@ -69,3 +69,41 @@ across all 1,193 matched tasks (`figures/automation_gap_histogram.png`).
 Almost all tasks fall on the positive side (API higher than Claude.ai), and
 the distribution is roughly bell-shaped around the mean, which supports the
 assumptions behind the paired t-test.
+
+### Week 6-7 — REGRESSION MODEL
+- Moved from a hypothesis test to a regression model, as suggested.
+  Restructured the data so that each matched task appears twice (once for
+  the 1P API, once for Claude.ai): 1,193 tasks × 2 platforms = 2,386
+  observations.
+- Estimated a multiple linear regression in Python (statsmodels):
+  `automation_pct = β0 + β1·api + β2·log_volume + ε`, where `api` is a
+  dummy variable and `log_volume` is the log of the task's conversation
+  count. Standard errors are clustered by task.
+- Ran four robustness checks: adding the unclassified share, adding task
+  fixed effects, and using automation measured only among classified
+  conversations.
+
+### Main findings
+- The API coefficient is **31.08 pp** (p < 0.001): on the same task,
+  businesses use automation about 31 percentage points more than
+  consumers.
+- The result is robust: the API coefficient stays between 31 and 36 pp
+  and significant at the 1% level in all five models.
+- Usage volume does not explain the gap (p = 0.49 in the main model).
+- The model with only the API dummy reproduces the earlier paired t-test
+  exactly (31.03 pp), so the regression extends the previous result
+  rather than replacing it.
+
+### Challenges
+- My first data merge included tasks with only unclassified conversations,
+  which produced 1,604 tasks instead of 1,193. I fixed this by keeping only
+  tasks with classified conversations on both platforms.
+- The sign of `log_volume` changed when the unclassified share was added,
+  which I interpreted as omitted variable bias.
+
+### Next steps
+- Answer the "how" part of the research question: estimate a separate
+  model for each collaboration type (directive, feedback loop, learning,
+  task iteration, validation) and visualize the API coefficients.
+  Preliminary results: directive +32 pp, task iteration −17.6 pp,
+  learning −12.9 pp on the API.
