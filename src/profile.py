@@ -602,12 +602,6 @@ print(main_model.summary())
 # REGRESSION MODEL - STEP 3: ROBUSTNESS CHECKS
 # Does the api coefficient stay the same when we add more controls?
 # =============================================================================
-# automation as a share of CLASSIFIED conversations only (for model 5)
-panel["automation_norm"] = 100 * panel["automation_pct"] / (
-    panel["automation_pct"] + panel["augmentation_pct"]
-)
-
-
 def fit(formula):
     """OLS with standard errors clustered by task."""
     return smf.ols(formula, data=panel).fit(

@@ -79,16 +79,15 @@ assumptions behind the paired t-test.
   `automation_pct = β0 + β1·api + β2·log_volume + ε`, where `api` is a
   dummy variable and `log_volume` is the log of the task's conversation
   count. Standard errors are clustered by task.
-- Ran four robustness checks: adding the unclassified share, adding task
-  fixed effects, and using automation measured only among classified
-  conversations.
+- Ran robustness checks: adding the unclassified share and adding task
+  fixed effects.
 
 ### Main findings
 - The API coefficient is **31.08 pp** (p < 0.001): on the same task,
   businesses use automation about 31 percentage points more than
   consumers.
-- The result is robust: the API coefficient stays between 31 and 36 pp
-  and significant at the 1% level in all five models.
+- The result is robust: the API coefficient stays between 31 and 32 pp
+  and significant at the 1% level in all four models.
 - Usage volume does not explain the gap (p = 0.49 in the main model).
 - The model with only the API dummy reproduces the earlier paired t-test
   exactly (31.03 pp), so the regression extends the previous result
