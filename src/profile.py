@@ -613,8 +613,7 @@ models = {
     "(1) api only":          fit("automation_pct ~ api"),
     "(2) + log_volume":      fit("automation_pct ~ api + log_volume"),
     "(3) + unclassified":    fit("automation_pct ~ api + log_volume + unclassified_pct"),
-    "(4) task FE":           fit("automation_pct ~ api + log_volume + C(task)"),
-    "(5) normalized y + FE": fit("automation_norm ~ api + log_volume + C(task)"),
+    "(4) task FE":           fit("automation_pct ~ api + log_volume + C(task)"),git add src/profile.py
 }
 
 # comparison table: only the variables we care about (not the 1,192 task dummies)
