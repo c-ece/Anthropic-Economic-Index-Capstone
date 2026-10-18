@@ -103,20 +103,6 @@ than the Claude.ai automation share by about 31 percentage points on
 average — a large, statistically significant gap unlikely to be due to
 random noise.
 
-## Interpretation and Limitations
-This result supports the idea that businesses and individuals use the same
-underlying model differently, even on the same task. Since this is based on
-a single time period (Aug 2025) and only the automation/augmentation split
-from collaboration type, it does not yet address:
-
-- whether the gap is larger for high-complexity/high-wage occupations (H2)
-- whether the gap changes across later releases (H3)
-
-Both are planned for the next phase, once the newer release's schema
-(Jun 2026) is harmonized — it stores this information differently
-(pre-computed `collaboration_bucket_automation_pct` metric instead of raw
-collaboration-type rows).
-
 ## Distribution of the Automation Gap
 
 ![Automation Gap Distribution](figures/automation_gap_histogram.png)
@@ -130,3 +116,40 @@ paired t-test — the test assumes the differences are roughly normally
 distributed. The small number of tasks on the left side (negative values)
 represent the few cases where Claude.ai had a higher automation share than
 the API.
+
+## Regression Model
+
+To control for other factors, I extended the paired t-test into a multiple
+linear regression. Each matched task appears twice (once per platform),
+giving 2,386 observations (1,193 tasks × 2 platforms).
+
+    automation_pct = β0 + β1·api + β2·log_volume + ε
+
+- `api`: dummy variable (1 = 1P API, 0 = Claude.ai)
+- `log_volume`: log of the task's conversation count on that platform
+- Standard errors are clustered by task, since the two rows of a task are
+  not independent.
+
+### Robustness Checks
+
+| | (1) api only | (2) + log_volume | (3) + unclassified | (4) task FE | (5) normalized y + FE |
+|---|---|---|---|---|---|
+| api | 31.029*** | 31.082*** | 31.847*** | 31.140*** | 36.046*** |
+| log_volume | | 0.181 | -2.207*** | 0.381 | -6.011*** |
+| unclassified_pct | | | -0.491*** | | |
+| R² | 0.475 | 0.475 | 0.555 | 0.859 | 0.830 |
+| N | 2,386 | 2,386 | 2,386 | 2,386 | 2,386 |
+
+*** p < 0.01
+
+The API coefficient stays between 31 and 36 percentage points and is
+significant at the 1% level in every specification. Model (1) reproduces
+the paired t-test (mean difference = 31.03 pp). The gap is not explained by
+usage volume, by the share of unclassified conversations, or by differences
+between tasks (task fixed effects). When automation is measured only among
+classified conversations (5), the gap grows to 36 pp, so 31 pp is a
+conservative estimate.
+
+The sign change of `log_volume` between models (2) and (3) is an example of
+omitted variable bias: high-volume tasks have a lower unclassified share,
+so `log_volume` was partly picking up the effect of `unclassified_pct`.
