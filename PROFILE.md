@@ -132,21 +132,20 @@ giving 2,386 observations (1,193 tasks × 2 platforms).
 
 ### Robustness Checks
 
-| | (1) api only | (2) + log_volume | (3) + unclassified | (4) task FE |
-|---|---|---|---|---|
-| api | 31.029*** | 31.082*** | 31.847*** | 31.140*** |
-| log_volume | | 0.181 | -2.207*** | 0.381 |
-| unclassified_pct | | | -0.491*** | |
-| R² | 0.475 | 0.475 | 0.555 | 0.859 |
-| N | 2,386 | 2,386 | 2,386 | 2,386 |
+| | (1) api only | (2) + log_volume | (3) + unclassified |
+|---|---|---|---|
+| api | 31.029*** | 31.082*** | 31.847*** |
+| log_volume | | 0.181 | -2.207*** |
+| unclassified_pct | | | -0.491*** |
+| R² | 0.475 | 0.475 | 0.555 |
+| N | 2,386 | 2,386 | 2,386 |
 
 *** p < 0.01
 
 The API coefficient stays between 31 and 32 percentage points and is
 significant at the 1% level in every specification. Model (1) reproduces
 the paired t-test (mean difference = 31.03 pp). The gap is not explained by
-usage volume, by the share of unclassified conversations, or by differences
-between tasks (task fixed effects).
+usage volume or by the share of unclassified conversations.
 
 The sign change of `log_volume` between models (2) and (3) is an example of
 omitted variable bias: high-volume tasks have a lower unclassified share,
