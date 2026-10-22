@@ -1,73 +1,127 @@
-Weekly Progress Log
-Week 1 — Dataset & Research Question
+# Weekly Progress Log
 
-Selected the Anthropic Economic Index dataset and chose Research Question 3: Do consumers and businesses use AI differently on the same tasks? The plan is to hold the O*NET task fixed and compare interaction style (automation vs. augmentation) between Claude.ai (consumer) and the 1P API (business).
+**Research question:** Do consumers (Claude.ai) and businesses (1P API) use
+AI differently on the same tasks?
 
-Week 2 — Setup & Verification (Step 1)
-Set up the repository structure (notebooks/, src/, data/ [git-ignored], NOTES.md, README.md).
-Downloaded the Aug 2025 release from the primary source and recorded provenance (URL, release date, license, citation) in NOTES.md.
-Read the Anthropic Economic Index documentation and recorded the unit of observation, labeling method, and headline numbers to use as verification targets.
-Built an inventory script (src/inventory.py) covering file sizes, row counts, columns, and missing-value rates.
-Reproduced Anthropic's published numbers as a sanity check: 77.37% automation / 12.41% augmentation in the 1P API data, matching the report's published ~77% / ~12%.
-Reviewed raw example rows to build intuition about the collaboration-type labels and task text.
-Produced PROFILE.md with the exploratory data summary.
-Week 3 — Manual Task-Level Comparisons
+---
 
-Compared Claude.ai vs. 1P API on two individual O*NET tasks, to see whether the aggregate gap (automation-heavy API vs. augmentation-heavy Claude.ai) also holds at the single-task level:
+## Week 1 — Dataset & Research Question
 
-Counseling task ("advise clients on how they could be helped by counseling"): API automation 30.98% vs. Claude.ai 16.06%; Claude.ai augmentation was much higher (70.26% vs. 23.91%).
-Risk & investment task ("analyze and classify risks and investments"): an even larger gap — API automation 96.32% vs. Claude.ai 32.39%.
+Selected the Anthropic Economic Index and chose Research Question 3. The plan
+is to hold the O*NET task fixed and compare how people work with AI
+(automation vs. augmentation) on Claude.ai (consumers) and the 1P API
+(businesses).
 
-These two examples suggested the aggregate pattern holds at the task level too, motivating a formal test across all matched tasks.
+## Week 2 — Setup & Verification
 
-Week 4-5 — Hypothesis Formulation & First Test (H1)
+**What I did**
+- Set up the repository (`notebooks/`, `src/`, `data/` [git-ignored],
+  `NOTES.md`, `README.md`).
+- Downloaded the 2025-09-15 release (data from Aug 4–11, 2025) and recorded
+  the source, license and citation in `NOTES.md`.
+- Wrote `src/inventory.py` to check file sizes, row counts, columns and
+  missing values.
+- Looked at raw example rows to understand the collaboration labels.
 
-Formulated the hypotheses for Q3:
+**Result**
+- Reproduced Anthropic's published numbers: **77.37% automation / 12.41%
+  augmentation** on the API (report: ~77% / ~12%).
 
-H0: No difference in automation share between API and Claude.ai for the same task (mean(diff) = 0).
-H1: Automation share is systematically higher on the API (mean(diff) > 0), driven by businesses optimizing for cost/efficiency vs. individuals favoring learning and control.
+## Week 3 — Two Example Tasks
 
-Generalized the Week 3 manual comparisons into a script that matches all tasks present in both sources and computes the automation-share difference for each. Ran a one-tailed paired t-test.
+**What I did**
+- Compared Claude.ai and the API on two single O*NET tasks.
 
-Metric	Value
-Matched tasks (n)	1,193
-Mean diff (API − Claude.ai)	+31.03 pp
-Median diff	+31.43 pp
-t-statistic	63.26
-p-value	< .001
-Conclusion	Reject H0 → H1 supported
+**Results**
 
-The gap is large and statistically significant across nearly the full task set, not just the two examples from Week 3. Next steps: test whether the gap size depends on occupation wage/complexity (H2) and whether it changes across later data releases (H3).
+| Task | API automation | Claude.ai automation |
+|---|---|---|
+| Counseling | 30.98% | 16.06% |
+| Risk & investment analysis | 96.32% | 32.39% |
 
-To visualize this result, I also plotted a histogram of the diff values across all 1,193 matched tasks (figures/automation_gap_histogram.png). Almost all tasks fall on the positive side (API higher than Claude.ai), and the distribution is roughly bell-shaped around the mean, which supports the assumptions behind the paired t-test.
+Both examples show the same pattern as the overall data, so the next step
+was a formal test across all tasks.
 
-Week 6-7 — REGRESSION MODEL
-Moved from a hypothesis test to a regression model, as suggested. Restructured the data so that each matched task appears twice (once for the 1P API, once for Claude.ai): 1,193 tasks × 2 platforms = 2,386 observations.
-Estimated a multiple linear regression in Python (statsmodels): automation_pct = β0 + β1·api + β2·log_volume + ε, where api is a dummy variable and log_volume is the log of the task's conversation count. Standard errors are clustered by task.
-Ran robustness checks: adding the unclassified share.
-Main findings
-The API coefficient is 31.08 pp (p < 0.001): on the same task, businesses use automation about 31 percentage points more than consumers.
-The result is robust: the API coefficient stays between 31 and 32 pp and significant at the 1% level in all three models.
-Usage volume does not explain the gap (p = 0.49 in the main model).
-The model with only the API dummy reproduces the earlier paired t-test exactly (31.03 pp), so the regression extends the previous result rather than replacing it.
-Challenges
-My first data merge included tasks with only unclassified conversations, which produced 1,604 tasks instead of 1,193. I fixed this by keeping only tasks with classified conversations on both platforms.
-The sign of log_volume changed when the unclassified share was added, which I interpreted as omitted variable bias.
-Next steps
-Answer the "how" part of the research question: estimate a separate model for each collaboration type (directive, feedback loop, learning, task iteration, validation) and visualize the API coefficients. Preliminary results: directive +32 pp, task iteration −17.6 pp, learning −12.9 pp on the API.
-Week 8 — How Do They Differ? Collaboration Types & Exceptions
-Answered the "how" part of the research question. Wrote src/how_and_negatives.py, which compares the five collaboration types task by task and estimates a separate regression for each type (same spec as the main model, standard errors clustered by task).
-Checked which collaboration type changes the most in each task ("main shift" from Claude.ai to the API).
-Looked at the exceptions: the tasks where Claude.ai has a higher automation share than the API.
-Added the results and four new figures to PROFILE.md (Figures 4–7); result tables are saved in tables/.
-Main findings
-The automation gap comes almost entirely from directive use: +31.6 pp on the API, higher on the API in 97.6% of tasks.
-The API mainly loses task iteration (−18.0 pp) and learning (−13.3 pp). Feedback loop and validation barely differ.
-In about 95% of tasks, the type that grows the most on the API is directive (most often task iteration → directive, 46.9%, and learning → directive, 34.5%).
-Interpretation: businesses delegate a task in one shot, while consumers work on it together with Claude or use it to learn.
-Only 37 of 1,193 tasks (3.1%) are exceptions. They are not just rare tasks (Mann-Whitney p = 0.25), but their API unclassified share is much higher (median 38.5% vs. 14.6%), so part of the exceptions is probably a measurement effect. Many of them are education/counseling or technical support tasks.
-Challenges
-The task-level average of feedback loop on the API (1.9%) is far below the global value (11%). The reason is weighting: global numbers are weighted by volume, while task averages give every task the same weight.
-Running the scripts locally failed at first because the data/ folder is git-ignored, so the CSV files had to be downloaded again from Hugging Face.
-Next steps
-Recalculate the automation share using only classified conversations, automation / (automation + augmentation), and check how many of the 37 exceptions remain negative.
+## Week 4–5 — Hypothesis Test
+
+**Hypotheses**
+- **H0:** No difference in automation share between the API and Claude.ai
+  for the same task.
+- **H1:** The automation share is higher on the API.
+
+**What I did**
+- Matched all tasks that appear on both platforms and computed
+  `diff = automation% API − automation% Claude.ai` for each task.
+- Ran a one-tailed paired t-test and plotted a histogram of the differences.
+
+**Results**
+
+| Metric | Value |
+|---|---|
+| Matched tasks | 1,193 |
+| Mean difference | +31.03 pp |
+| Median difference | +31.43 pp |
+| t-statistic | 63.26 |
+| p-value | < .001 |
+
+H0 is rejected. Almost all tasks are on the positive side of the histogram.
+
+## Week 6–7 — Regression Model
+
+**What I did**
+- Rebuilt the data with one row per task and platform (1,193 × 2 = 2,386
+  rows).
+- Estimated `automation_pct = β0 + β1·api + β2·log_volume + ε` with
+  standard errors clustered by task.
+- Robustness check: added the unclassified share as a control.
+
+**Results**
+- API coefficient: **31.08 pp** (p < .001).
+- Stays between 31 and 32 pp in all three models.
+- Usage volume does not explain the gap (p = 0.49).
+
+**Challenges**
+- The first merge gave 1,604 tasks instead of 1,193, because some tasks had
+  only unclassified conversations. Fixed by keeping tasks with classified
+  conversations on both platforms.
+- The sign of `log_volume` changed after adding the unclassified share
+  (omitted variable bias).
+
+## Week 8 — How Do They Differ?
+
+**What I did**
+- Added a new section to `src/profile.py` that compares the five
+  collaboration types task by task, with one regression per type.
+- Checked which type changes the most in each task ("main shift").
+- Studied the exceptions: tasks where Claude.ai automates more than the API.
+- Added the results to `PROFILE.md` (Figures 4–7) and saved tables in
+  `tables/`.
+
+**Results**
+
+| Collaboration type | API effect |
+|---|---|
+| Directive | **+31.6 pp** (API higher in 97.6% of tasks) |
+| Task iteration | **−18.0 pp** |
+| Learning | **−13.3 pp** |
+| Validation | −1.3 pp |
+| Feedback loop | −0.5 pp |
+
+- In about 95% of tasks, the type that grows the most on the API is
+  directive.
+- **Interpretation:** businesses hand the task over in one step; consumers
+  work on it together with Claude or use it to learn.
+- **Exceptions:** 37 of 1,193 tasks (3.1%). They are not just rare tasks
+  (p = 0.25), but their API unclassified share is much higher (38.5% vs.
+  14.6%), so some of them are probably a measurement effect. Many are
+  education, counseling or technical support tasks.
+
+**Challenges**
+- Feedback loop is 11% of API use overall but only 1.9% on average per
+  task: overall numbers are weighted by volume, task averages are not.
+
+## Next Step
+
+Recalculate the automation share using only classified conversations,
+`automation / (automation + augmentation)`, and check how many of the 37
+exceptions are still negative.
