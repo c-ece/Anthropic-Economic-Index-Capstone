@@ -1,0 +1,38 @@
+task,automation_pct_claude,automation_pct_api,diff,augmentation_pct_claude,augmentation_pct_api,unclassified_pct_claude,unclassified_pct_api,volume_claude,volume_api,main_shift
+"conduct on-the-job training classes or training sessions to teach and demonstrate principles, techniques, procedures, or methods of designated subjects.",37.88,0.0,-37.88,57.58,32.26,4.55,67.74,66.0,62.0,directive  →  feedback loop
+"counsel students regarding educational issues, such as course and program selection, class scheduling and registration, school adjustment, truancy, study habits, and career planning.",26.22,0.0,-26.22,70.67,45.0,3.11,55.0,225.0,40.0,task iteration  →  learning
+"perform computer programming, data analysis, or software development for geographic information systems (gis) applications, including the maintenance of existing systems or research and development for future enhancements.",67.92,46.88,-21.05,0.0,0.0,32.08,53.12,53.0,32.0,feedback loop  →  directive
+"locate files relating to specified design project in database library, load program into computer, and record completed job data.",82.61,63.79,-18.82,0.0,0.0,17.39,36.21,23.0,58.0,directive  →  feedback loop
+develop program plans for individuals or assist in plan development.,61.43,42.86,-18.57,30.0,0.0,8.57,57.14,70.0,35.0,task iteration  →  feedback loop
+"modify, maintain, and repair electronics equipment and systems to ensure that they function properly.",74.86,56.52,-18.34,23.09,0.0,2.05,43.48,537.0,46.0,feedback loop  →  directive
+greet customers and help them locate merchandise.,83.78,65.79,-17.99,0.0,0.0,16.22,34.21,37.0,38.0,directive  →  feedback loop
+"consult with and advise physicians, educators, researchers, government health officials and others regarding medical applications of sciences, such as physics, biology, and chemistry.",13.6,0.0,-13.6,84.5,55.81,1.9,44.19,684.0,43.0,task iteration  →  feedback loop
+"educate patients about diagnoses, prognoses, or treatments.",13.26,0.0,-13.26,83.33,62.5,3.41,37.5,264.0,32.0,directive  →  feedback loop
+respond to program error messages by finding and correcting problems or terminating the program.,67.72,54.63,-13.08,29.21,10.16,3.07,35.21,2540.0,2579.0,feedback loop  →  directive
+decline excessive risks.,37.68,25.0,-12.68,0.0,0.0,62.32,75.0,69.0,72.0,directive  →  feedback loop
+"use materials such as pens and ink, watercolors, charcoal, oil, or computer software to create artwork.",64.16,51.63,-12.53,31.51,35.37,4.34,13.01,438.0,246.0,directive  →  task iteration
+"counsel clients or patients, individually or in group sessions, to assist in overcoming dependencies, adjusting to life, or making changes.",11.05,0.0,-11.05,72.67,52.88,16.28,47.12,172.0,104.0,learning  →  feedback loop
+provide technical support or assistance to chemists or engineers.,40.52,29.69,-10.84,56.73,32.81,2.74,37.5,802.0,64.0,feedback loop  →  directive
+tutor and assist children individually or in small groups to help them master assignments and to reinforce learning concepts presented by teachers.,46.29,35.97,-10.32,52.45,56.33,1.25,7.69,877.0,442.0,task iteration  →  learning
+"record and compile operational data by completing and maintaining forms, logs, or reports.",66.67,58.46,-8.21,0.0,0.0,33.33,41.54,39.0,650.0,directive  →  feedback loop
+"produce up-to-the-minute information, using internal computer systems, to allow management to base decisions on actual, not historical, data.",73.91,66.09,-7.82,0.0,12.64,26.09,21.26,46.0,174.0,directive  →  validation
+"answer telephones, responding to questions or requests.",20.28,13.73,-6.55,0.0,0.0,79.72,86.27,434.0,335.0,directive  →  feedback loop
+configure security settings or access permissions for groups or individuals.,46.3,39.79,-6.51,41.36,14.55,12.35,45.66,162.0,852.0,learning  →  validation
+provide road information to assist motorists.,67.59,61.54,-6.05,29.25,0.0,3.16,38.46,253.0,52.0,learning  →  directive
+"design software to control robotic systems for applications, such as military defense or manufacturing.",59.64,53.68,-5.96,38.57,20.0,1.79,26.32,223.0,95.0,feedback loop  →  directive
+"create visual representations of geospatial data using complex procedures, such as analytical modeling, three-dimensional renderings, or plot creation.",60.24,54.39,-5.85,27.71,0.0,12.05,45.61,166.0,57.0,task iteration  →  directive
+prepare and deliver sermons or other talks.,58.6,53.49,-5.11,37.03,41.86,4.37,4.65,343.0,43.0,directive  →  task iteration
+"prepare, maintain, or update security procedures, security system drawings, or related documentation.",57.14,52.17,-4.97,0.0,0.0,42.86,47.83,42.0,46.0,directive  →  feedback loop
+"communicate research or project results to other professionals or the public or teach related courses, seminars, or workshops.",4.66,0.0,-4.66,94.51,71.93,0.83,28.07,601.0,57.0,learning  →  feedback loop
+respond to general inquiries or requests from the public.,27.97,23.42,-4.55,18.93,8.56,53.1,68.02,597.0,222.0,learning  →  feedback loop
+"guide and counsel students with adjustment or academic problems, or special academic interests.",41.38,37.21,-4.17,48.28,0.0,10.34,62.79,116.0,43.0,task iteration  →  feedback loop
+"administer, proctor, or score academic or diagnostic assessments.",70.81,66.82,-3.99,16.76,23.53,12.43,9.65,185.0,425.0,directive  →  learning
+"provide services to customers, such as order placement or account information.",77.42,73.53,-3.89,0.0,0.0,22.58,26.47,62.0,204.0,directive  →  feedback loop
+"install, service, and repair electronic equipment or instruments such as televisions, radios, and videocassette recorders.",68.15,65.0,-3.15,27.4,0.0,4.45,35.0,292.0,60.0,learning  →  directive
+"create, analyze, report, convert, or transfer data, using specialized applications program software.",83.22,80.25,-2.97,15.32,2.87,1.46,16.88,1162.0,9959.0,task iteration  →  directive
+"prepare, administer, and grade tests and assignments to evaluate students' progress.",70.76,68.93,-1.84,23.73,16.38,5.51,14.69,236.0,177.0,task iteration  →  validation
+write program code to analyze data using statistical analysis software.,61.76,60.59,-1.18,33.82,3.14,4.41,36.27,272.0,477.0,task iteration  →  directive
+"calibrate, troubleshoot, or repair equipment and correct malfunctions as needed.",54.33,53.33,-1.0,38.58,0.0,7.09,46.67,254.0,30.0,feedback loop  →  directive
+"implement changes to machine programs and enter new specifications, using computers.",66.85,65.89,-0.96,29.25,10.75,3.9,23.36,359.0,214.0,task iteration  →  directive
+"participate in student recruitment, registration, and placement activities.",54.29,53.57,-0.71,0.0,0.0,45.71,46.43,35.0,56.0,directive  →  feedback loop
+"implement and provide technical support for voice services and equipment, such as private branch exchange, voice mail system, and telecom system.",48.89,48.48,-0.4,44.44,0.0,6.67,51.52,90.0,33.0,learning  →  feedback loop
