@@ -92,7 +92,6 @@ H0 is rejected. Almost all tasks are on the positive side of the histogram.
 **What I did**
 - Added a new section to `src/profile.py` that compares the five
   collaboration types task by task, with one regression per type.
-- Checked which type changes the most in each task ("main shift").
 - Studied the exceptions: tasks where Claude.ai automates more than the API.
 - Added the results to `PROFILE.md` (Figures 4–7) and saved tables in
   `tables/`.
