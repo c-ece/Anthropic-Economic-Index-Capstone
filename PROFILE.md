@@ -167,10 +167,7 @@ ran the same regression as the main model
 | Task iteration | 20.5 | 2.0 | **−18.0** | 0.5% | 74.5% |
 | Validation | 3.5 | 1.9 | −1.3 | 5.8% | 29.6% |
 
-All five differences are significant at the 1% level, also after a
-Bonferroni correction for running five tests. (The two right-hand columns
-do not add up to 100% because in many tasks both platforms have 0% for that
-type.)
+
 
 ![API coefficient per collaboration type](figures/collab_type_api_coefficients.png)
 
@@ -179,28 +176,6 @@ intervals. The automation gap comes almost entirely from **directive** use.
 Feedback loop, the second automation type, barely differs. On the other side,
 the API loses mostly **task iteration** and **learning**.
 
-![Per-task gaps by collaboration type](figures/collab_type_task_diffs.png)
-
-**Figure 5.** The same comparison task by task. Each box shows how the gap
-(API − Claude.ai) is spread across the 1,193 tasks. The directive box sits
-almost completely to the right of zero, and the task iteration and learning
-boxes to the left. So the pattern is not only an average: it holds for
-nearly every individual task.
-
-### The Main Shift in Each Task
-
-For every task, I also checked which type gains the most on the API and
-which type gains the most on Claude.ai:
-
-| Main shift (Claude.ai → API) | Tasks | Share |
-|---|---|---|
-| task iteration → directive | 560 | 46.9% |
-| learning → directive | 412 | 34.5% |
-| feedback loop → directive | 148 | 12.4% |
-| validation → directive | 19 | 1.6% |
-| all other combinations | 54 | 4.5% |
-
-In about 95% of tasks, the type that grows the most on the API is directive.
 
 ### Interpretation
 
@@ -216,11 +191,8 @@ Two notes:
 - The five shares and the unclassified share add up to 100% within a task,
   so the coefficients balance each other: what the API gains in directive,
   it loses mainly in task iteration and learning.
-- In the global numbers (Figure 3), feedback loop is about 11% of API use,
-  but the task-level average is only 1.9%. Global numbers are weighted by
-  volume, while my task averages give every task the same weight. This
-  suggests that feedback loop is concentrated in a few very large tasks
-  (for example debugging code).
+
+
 
 ## Exceptions: Tasks Where Claude.ai Automates More
 
@@ -233,33 +205,7 @@ than the API.
 In 7 tasks the API automation share is exactly 0%. The full list is in
 `tables/negative_tasks.csv`.
 
-### Are These Exceptions Just Noise?
 
-A first idea was that these are rare tasks with only a few conversations,
-where the percentages are unreliable. I compared the negative tasks with
-all other tasks:
-
-| Median | Negative tasks (37) | Other tasks (1,156) |
-|---|---|---|
-| API conversations | 62 | 112 |
-| Claude.ai conversations | 225 | 152 |
-| API unclassified share | **38.5%** | **14.6%** |
-| Claude.ai unclassified share | 6.7% | 8.4% |
-
-![Gap vs. volume](figures/gap_vs_volume.png)
-
-**Figure 7.** The automation gap of each task against its number of
-conversations (on the platform with fewer conversations), on a log scale.
-If the exceptions were mainly noise, the negative tasks (red) would be
-grouped at the low-volume end on the left.
-
-The volume explanation does not hold: a Mann-Whitney test finds no
-significant difference in volume (p = 0.25). The clear difference is the
-**unclassified share on the API**: it is 38.5% for the negative tasks, more
-than twice the 14.6% of other tasks. Because the automation share is
-calculated over *all* conversations, a high unclassified share pulls the
-API's automation share down. So some of these exceptions are probably a
-measurement effect rather than a real difference in behavior.
 
 ### What Kind of Tasks Are They?
 
@@ -276,9 +222,3 @@ inside products that are designed to teach or support a person (for example
 education or counseling apps), so even business use looks like augmentation.
 The data cannot prove this, but it fits the pattern.
 
-### Next Step
-
-Recalculate the automation share using only classified conversations,
-`automation / (automation + augmentation)`, and check how many of the 37
-tasks are still negative. Tasks that stay negative would be the real
-exceptions.
