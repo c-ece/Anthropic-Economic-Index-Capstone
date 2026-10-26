@@ -167,10 +167,7 @@ ran the same regression as the main model
 | Task iteration | 20.5 | 2.0 | **−18.0** | 0.5% | 74.5% |
 | Validation | 3.5 | 1.9 | −1.3 | 5.8% | 29.6% |
 
-All five differences are significant at the 1% level, also after a
-Bonferroni correction for running five tests. (The two right-hand columns
-do not add up to 100% because in many tasks both platforms have 0% for that
-type.)
+
 
 ![API coefficient per collaboration type](figures/collab_type_api_coefficients.png)
 
@@ -194,10 +191,7 @@ Two notes:
 - The five shares and the unclassified share add up to 100% within a task,
   so the coefficients balance each other: what the API gains in directive,
   it loses mainly in task iteration and learning.
-- In the global numbers (Figure 3), feedback loop is about 11% of API use,
-  but the task-level average is only 1.9%. Global numbers are weighted by
-  volume, while my task averages give every task the same weight. This
-  suggests that feedback loop is concentrated in a few very large tasks
+
 
 
 ## Exceptions: Tasks Where Claude.ai Automates More
@@ -210,19 +204,6 @@ than the API.
 **Figure 6.** The 30 most negative tasks. Blue = Claude.ai, orange = 1P API.
 In 7 tasks the API automation share is exactly 0%. The full list is in
 `tables/negative_tasks.csv`.
-
-### Are These Exceptions Just Noise?
-
-A first idea was that these are rare tasks with only a few conversations,
-where the percentages are unreliable. I compared the negative tasks with
-all other tasks:
-
-| Median | Negative tasks (37) | Other tasks (1,156) |
-|---|---|---|
-| API conversations | 62 | 112 |
-| Claude.ai conversations | 225 | 152 |
-| API unclassified share | **38.5%** | **14.6%** |
-| Claude.ai unclassified share | 6.7% | 8.4% |
 
 
 
