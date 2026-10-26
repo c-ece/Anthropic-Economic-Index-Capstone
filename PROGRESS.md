@@ -116,12 +116,3 @@ H0 is rejected. Almost all tasks are on the positive side of the histogram.
   14.6%), so some of them are probably a measurement effect. Many are
   education, counseling or technical support tasks.
 
-**Challenges**
-- Feedback loop is 11% of API use overall but only 1.9% on average per
-  task: overall numbers are weighted by volume, task averages are not.
-
-## Next Step
-
-Recalculate the automation share using only classified conversations,
-`automation / (automation + augmentation)`, and check how many of the 37
-exceptions are still negative.
