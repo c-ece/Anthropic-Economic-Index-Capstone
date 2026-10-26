@@ -179,13 +179,6 @@ intervals. The automation gap comes almost entirely from **directive** use.
 Feedback loop, the second automation type, barely differs. On the other side,
 the API loses mostly **task iteration** and **learning**.
 
-![Per-task gaps by collaboration type](figures/collab_type_task_diffs.png)
-
-**Figure 5.** The same comparison task by task. Each box shows how the gap
-(API − Claude.ai) is spread across the 1,193 tasks. The directive box sits
-almost completely to the right of zero, and the task iteration and learning
-boxes to the left. So the pattern is not only an average: it holds for
-nearly every individual task.
 
 ### The Main Shift in Each Task
 
@@ -220,7 +213,7 @@ Two notes:
   but the task-level average is only 1.9%. Global numbers are weighted by
   volume, while my task averages give every task the same weight. This
   suggests that feedback loop is concentrated in a few very large tasks
-  (for example debugging code).
+
 
 ## Exceptions: Tasks Where Claude.ai Automates More
 
@@ -246,20 +239,7 @@ all other tasks:
 | API unclassified share | **38.5%** | **14.6%** |
 | Claude.ai unclassified share | 6.7% | 8.4% |
 
-![Gap vs. volume](figures/gap_vs_volume.png)
 
-**Figure 7.** The automation gap of each task against its number of
-conversations (on the platform with fewer conversations), on a log scale.
-If the exceptions were mainly noise, the negative tasks (red) would be
-grouped at the low-volume end on the left.
-
-The volume explanation does not hold: a Mann-Whitney test finds no
-significant difference in volume (p = 0.25). The clear difference is the
-**unclassified share on the API**: it is 38.5% for the negative tasks, more
-than twice the 14.6% of other tasks. Because the automation share is
-calculated over *all* conversations, a high unclassified share pulls the
-API's automation share down. So some of these exceptions are probably a
-measurement effect rather than a real difference in behavior.
 
 ### What Kind of Tasks Are They?
 
