@@ -180,21 +180,6 @@ Feedback loop, the second automation type, barely differs. On the other side,
 the API loses mostly **task iteration** and **learning**.
 
 
-### The Main Shift in Each Task
-
-For every task, I also checked which type gains the most on the API and
-which type gains the most on Claude.ai:
-
-| Main shift (Claude.ai → API) | Tasks | Share |
-|---|---|---|
-| task iteration → directive | 560 | 46.9% |
-| learning → directive | 412 | 34.5% |
-| feedback loop → directive | 148 | 12.4% |
-| validation → directive | 19 | 1.6% |
-| all other combinations | 54 | 4.5% |
-
-In about 95% of tasks, the type that grows the most on the API is directive.
-
 ### Interpretation
 
 On the same task, businesses mostly give Claude a single instruction and take
