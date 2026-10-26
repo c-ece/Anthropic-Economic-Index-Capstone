@@ -276,9 +276,3 @@ inside products that are designed to teach or support a person (for example
 education or counseling apps), so even business use looks like augmentation.
 The data cannot prove this, but it fits the pattern.
 
-### Next Step
-
-Recalculate the automation share using only classified conversations,
-`automation / (automation + augmentation)`, and check how many of the 37
-tasks are still negative. Tasks that stay negative would be the real
-exceptions.
