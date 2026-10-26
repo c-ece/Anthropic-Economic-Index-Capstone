@@ -643,19 +643,14 @@ Part A - Collaboration types, task by task
     For every matched task, compare each of the five collaboration types
     (directive, feedback loop, learning, task iteration, validation)
     between the API and Claude.ai.
-      A1. Summary table: mean / median gap per type, share of tasks where
-          the API is higher, paired t-test, and a regression per type
+      A1. Summary table: mean gap per type, share of tasks where the API
+          is higher, and a regression per type
           (same spec as the main model: y = b0 + b1*api + b2*log_volume).
       A2. Coefficient plot of the API effect per collaboration type.
-      A3. Box plot of the per-task gaps (does the average hold task by task?).
-      A4. "Main shift" per task: which type gains the most on the API and
-          which type gains the most on Claude.ai, counted across tasks.
 
 Part B - Negative tasks (Claude.ai automates MORE than the API)
       B1. Table of all tasks with diff < 0.
-      B2. Are they real or small-sample noise? Compare usage volumes.
-      B3. Dumbbell chart: Claude.ai vs API automation for each negative task.
-      B4. Scatter: automation gap vs. usage volume, negatives highlighted.
+      B2. Dumbbell chart: Claude.ai vs API automation for each negative task.
 
 Data: Aug 2025 week (release_2025_09_15), same files as src/profile.py.
 Run from the repository root:   python src/how_and_negatives.py
@@ -668,7 +663,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
-from scipy import stats
 
 API_FILE = "data/aei_raw_1p_api_2025-08-04_to_2025-08-11.csv"
 CLAUDE_FILE = "data/aei_raw_claude_ai_2025-08-04_to_2025-08-11.csv"
@@ -776,9 +770,6 @@ rows = []
 for t in COLLAB_TYPES:
     d = wide[f"diff_{t}"]
 
-    # paired t-test (two-sided: we have no direction hypothesis for single types)
-    test = stats.ttest_rel(wide[f"{t}_api"], wide[f"{t}_claude"])
-
     # regression, same spec as the main model, SE clustered by task
     panel["y"] = panel[t]
     m = smf.ols("y ~ api + log_volume", data=panel).fit(
@@ -791,13 +782,8 @@ for t in COLLAB_TYPES:
         "mean_claude_pct": wide[f"{t}_claude"].mean(),
         "mean_api_pct": wide[f"{t}_api"].mean(),
         "mean_diff_pp": d.mean(),
-        "median_diff_pp": d.median(),
         "pct_tasks_api_higher": (d > 0).mean() * 100,
         "pct_tasks_claude_higher": (d < 0).mean() * 100,
-        "t_stat": test.statistic,
-        "p_value": test.pvalue,
-        # 5 tests at once -> Bonferroni correction (multiply p by 5, cap at 1)
-        "p_bonferroni": min(test.pvalue * len(COLLAB_TYPES), 1.0),
         "api_coef": m.params["api"],
         "ci_low": lo,
         "ci_high": hi,
@@ -811,7 +797,7 @@ print("A1. COLLABORATION TYPES: API vs Claude.ai on the same tasks")
 print("=" * 78)
 print(type_summary[[
     "mean_claude_pct", "mean_api_pct", "mean_diff_pp",
-    "pct_tasks_api_higher", "pct_tasks_claude_higher", "api_coef", "p_bonferroni",
+    "pct_tasks_api_higher", "pct_tasks_claude_higher", "api_coef",
 ]].round(2).to_string())
 print("\nNote: the five shares plus 'unclassified' add up to 100% within a task,")
 print("so the gaps balance out: what the API gains in one type, it loses in others.")
@@ -845,61 +831,18 @@ plt.tight_layout()
 plt.savefig("figures/collab_type_api_coefficients.png", dpi=150, bbox_inches="tight")
 plt.close()
 
-# ---- A3. Per-task gaps per type (does the average hold for each task?) --------
-order = list(plot_df.index)[::-1]   # same order as the coefficient plot (top = largest)
-fig, ax = plt.subplots(figsize=(9, 4.5))
-box_kwargs = dict(
-    widths=0.5, showfliers=True,
-    flierprops={"marker": ".", "markersize": 3, "alpha": 0.4},
-    medianprops={"color": "black"},
-)
-try:   # newer matplotlib (3.10+)
-    ax.boxplot([wide[f"diff_{t}"] for t in order], orientation="horizontal", **box_kwargs)
-except TypeError:   # older matplotlib
-    ax.boxplot([wide[f"diff_{t}"] for t in order], vert=False, **box_kwargs)
-ax.axvline(0, color="red", linestyle="--", linewidth=1)
-ax.set_yticks(range(1, len(order) + 1))
-ax.set_yticklabels(
-    [f"{TYPE_LABELS[t]}\n(API higher in {type_summary.loc[t, 'pct_tasks_api_higher']:.0f}% of tasks)"
-     for t in order],
-    fontsize=9,
-)
-ax.invert_yaxis()
-ax.set_xlabel("Per-task difference, API − Claude.ai (pp)")
-ax.set_title("Collaboration-type gaps task by task")
-plt.tight_layout()
-plt.savefig("figures/collab_type_task_diffs.png", dpi=150, bbox_inches="tight")
-plt.close()
-
-# ---- A4. Main shift per task --------------------------------------------------
-diff_cols = [f"diff_{t}" for t in COLLAB_TYPES]
-wide["api_gains_most"] = wide[diff_cols].idxmax(axis=1).str.replace("diff_", "")
-wide["claude_gains_most"] = wide[diff_cols].idxmin(axis=1).str.replace("diff_", "")
-wide["main_shift"] = wide["claude_gains_most"] + "  →  " + wide["api_gains_most"]
-
-shift_counts = wide["main_shift"].value_counts().rename("n_tasks").to_frame()
-shift_counts["pct_tasks"] = (shift_counts["n_tasks"] / n_tasks * 100).round(1)
-shift_counts.to_csv("tables/main_shift_per_task.csv")
-
-print("\n" + "=" * 78)
-print("A4. MAIN SHIFT PER TASK  (type Claude.ai uses more  →  type the API uses more)")
-print("=" * 78)
-print(shift_counts.head(10).to_string())
-
 
 # =============================================================================
 # PART B: NEGATIVE TASKS (Claude.ai automation > API automation)
 # =============================================================================
-wide["min_volume"] = wide[["volume_api", "volume_claude"]].min(axis=1)
 neg = wide[wide["diff"] < 0].sort_values("diff")
-pos = wide[wide["diff"] >= 0]
 
 # ---- B1. Table ----------------------------------------------------------------
 neg_table = neg[[
     "automation_pct_claude", "automation_pct_api", "diff",
     "augmentation_pct_claude", "augmentation_pct_api",
     "unclassified_pct_claude", "unclassified_pct_api",
-    "volume_claude", "volume_api", "main_shift",
+    "volume_claude", "volume_api",
 ]].round(2)
 neg_table.to_csv("tables/negative_tasks.csv")
 
@@ -909,28 +852,7 @@ print("=" * 78)
 print(neg_table[["automation_pct_claude", "automation_pct_api", "diff",
                  "volume_claude", "volume_api"]].to_string())
 
-# ---- B2. Real or noise? -------------------------------------------------------
-print("\n" + "=" * 78)
-print("B2. ARE NEGATIVE TASKS LOW-VOLUME (NOISY)?")
-print("=" * 78)
-cmp = pd.DataFrame({
-    "negative tasks": neg[["volume_api", "volume_claude", "unclassified_pct_api",
-                           "unclassified_pct_claude"]].median(),
-    "other tasks": pos[["volume_api", "volume_claude", "unclassified_pct_api",
-                        "unclassified_pct_claude"]].median(),
-}).round(2)
-print("Medians:")
-print(cmp.to_string())
-if len(neg) > 0:
-    mw = stats.mannwhitneyu(neg["min_volume"], pos["min_volume"], alternative="two-sided")
-    print(f"\nMann-Whitney test on the smaller platform's volume: p = {mw.pvalue:.3g}")
-    if mw.pvalue < 0.05 and neg["min_volume"].median() < pos["min_volume"].median():
-        print("-> Negative tasks have significantly lower volume: they may be small-sample noise.")
-    else:
-        print("-> No significant volume difference: the negatives are NOT just rare tasks.")
-        print("   Compare the unclassified shares above for another explanation.")
-
-# ---- B3. Dumbbell chart ---------------------------------------------------------
+# ---- B2. Dumbbell chart -------------------------------------------------------
 MAX_SHOWN = 30
 show = neg.head(MAX_SHOWN).iloc[::-1]   # most negative at the top
 
@@ -961,26 +883,6 @@ if len(show) > 0:
     plt.savefig("figures/negative_tasks_dumbbell.png", dpi=150, bbox_inches="tight")
     plt.close()
 
-# ---- B4. Gap vs. volume -------------------------------------------------------
-fig, ax = plt.subplots(figsize=(8, 5))
-ax.scatter(pos["min_volume"], pos["diff"], s=10, alpha=0.35, color="gray",
-           label=f"API higher ({len(pos)})")
-ax.scatter(neg["min_volume"], neg["diff"], s=18, color="red",
-           label=f"Claude.ai higher ({len(neg)})")
-ax.axhline(0, color="black", linewidth=1)
-ax.axhline(wide["diff"].mean(), color="red", linestyle="--", linewidth=1,
-           label=f"Mean = {wide['diff'].mean():.1f} pp")
-ax.set_xscale("log")
-ax.set_xlabel("Conversations on the smaller platform (log scale)")
-ax.set_ylabel("Automation gap, API − Claude.ai (pp)")
-ax.set_title("Is the automation gap noisier for rare tasks?")
-ax.legend()
-plt.tight_layout()
-plt.savefig("figures/gap_vs_volume.png", dpi=150, bbox_inches="tight")
-plt.close()
-
-print("\nSaved figures: collab_type_api_coefficients.png, collab_type_task_diffs.png,")
-print("               gap_vs_volume.png"
+print("\nSaved figures: collab_type_api_coefficients.png"
       + (", negative_tasks_dumbbell.png" if len(neg) > 0 else " (no negative tasks -> no dumbbell)"))
-print("Saved tables:  tables/collab_type_summary.csv, tables/main_shift_per_task.csv,")
-print("               tables/negative_tasks.csv")
+print("Saved tables:  tables/collab_type_summary.csv, tables/negative_tasks.csv")
