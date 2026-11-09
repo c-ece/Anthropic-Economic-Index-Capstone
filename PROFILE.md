@@ -395,15 +395,6 @@ The replication in the previous section shows the automation gap is stable.
 It does not show *why* the gap exists. Two objections were still open, and
 both can now be tested with facets that the August release did not have.
 
-**Objection 1 — the proxy might be wrong.** This whole project treats
-Claude.ai as consumer use and the 1P API as business use. That is an
-assumption. Nothing in the August data could check it.
-
-**Objection 2 — it might be about the task, not the user.** Maybe the API
-automates more only because it handles work tasks while Claude.ai handles
-personal ones, and work tasks are easier to automate. If so, the finding is
-about task mix and not about who the user is.
-
 The February release adds `use_case` (work / personal / coursework) and
 `human_only_ability` (could the user have completed the task without Claude?).
 The Week 11 section of `src/profile.py` uses both, on the same 1,359 matched
