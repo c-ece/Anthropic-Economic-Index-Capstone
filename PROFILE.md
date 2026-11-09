@@ -186,7 +186,7 @@ understand the topic (learning). In other words, the difference is not
 "more automation in general", it is **one-shot delegation vs. working
 together**.
 
-Two notes:
+Note:
 
 - The five shares and the unclassified share add up to 100% within a task,
   so the coefficients balance each other: what the API gains in directive,
