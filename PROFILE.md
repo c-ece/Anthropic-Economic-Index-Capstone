@@ -224,103 +224,170 @@ The data cannot prove this, but it fits the pattern.
 
 ## Replication on a Second Release (Feb 2026)
 
-Everything up to this point used one week of data: Aug 4–11, 2025, from the release_2025_09_15 files. A result from a single week could be an accident of that week. To check this, I repeated the whole analysis on a second release, release_2026_03_24, which covers Feb 5–12, 2026 — six months later, with newer models serving the traffic.
+Everything up to this point used one week of data: Aug 4–11, 2025, from the
+`release_2025_09_15` files. A result from a single week could be an accident of
+that week. To check this, I repeated the whole analysis on a second release,
+`release_2026_03_24`, which covers Feb 5–12, 2026 — six months later, with
+newer models serving the traffic.
 
-What I did
+### What I did
 
 I did not change the method. The Week 9–10 section of `src/profile.py` reuses the same rules as
+Weeks 4–8:
 
-Automation = directive + feedback loop; Augmentation = learning + task iteration + validation.
-Task-level data only (facet == "onet_task::collaboration", variable == "onet_task_collaboration_pct"), global level, cluster_name split into task name and collaboration type.
-A task is kept only if it has classified conversations on both platforms.
-One-tailed paired t-test, then automation_pct = β0 + β1·api + β2·log_volume + ε with standard errors clustered by task.
+- Automation = directive + feedback loop; Augmentation = learning + task
+  iteration + validation.
+- Task-level data only (`facet == "onet_task::collaboration"`,
+  `variable == "onet_task_collaboration_pct"`), global level, `cluster_name`
+  split into task name and collaboration type.
+- A task is kept only if it has classified conversations on *both* platforms.
+- One-tailed paired t-test, then `automation_pct = β0 + β1·api + β2·log_volume + ε`
+  with standard errors clustered by task.
 
-The only thing that changes is the input file. The script also re-runs August 2025 through the identical code, so both periods come out of one pipeline. As a check, it reproduces the Week 4–8 numbers exactly: 1,193 matched tasks, mean difference 31.03 pp, t = 63.26, api coefficient 31.082. That tells me the comparison below is a real comparison and not an artifact of two slightly different scripts.
+The only thing that changes is the input file. The script also re-runs
+August 2025 through the identical code, so both periods come out of one
+pipeline. As a check, it reproduces the Week 4–8 numbers exactly: 1,193
+matched tasks, mean difference 31.03 pp, t = 63.26, api coefficient 31.082.
+That tells me the comparison below is a real comparison and not an artifact of
+two slightly different scripts.
 
-The February files are much bigger — 477,717 rows for Claude.ai and 195,156 for the API, against 100,062 and 33,794 in August — and they contain 30 facets that did not exist in the first release.
+The February files are much bigger — 477,717 rows for Claude.ai and 195,156 for
+the API, against 100,062 and 33,794 in August — and they contain 30 facets that
+did not exist in the first release.
 
-Automation vs Augmentation, Feb 2026
+### Automation vs Augmentation, Feb 2026
 
-Automation vs augmentation, Feb 2026
+![Automation vs augmentation, Feb 2026](figures/feb2026_claude_vs_api.png)
 
-Figure 7. The same comparison as Figure 2, on the newer data. The API is still far more automation-heavy than Claude.ai (67.6% vs 44.2%), and Claude.ai is still the more augmentation-heavy platform (52.8% vs 17.2%).
+**Figure 7.** The same comparison as Figure 2, on the newer data. The API is
+still far more automation-heavy than Claude.ai (67.6% vs 44.2%), and Claude.ai
+is still the more augmentation-heavy platform (52.8% vs 17.2%).
 
-Compared with August, both platforms moved in the same direction: automation fell (API 77.4% → 67.6%, Claude.ai 49.1% → 44.2%) and augmentation rose. So the levels are not stable across releases. The question is whether the gap is.
+Compared with August, both platforms moved in the same direction: automation
+fell (API 77.4% → 67.6%, Claude.ai 49.1% → 44.2%) and augmentation rose. So the
+*levels* are not stable across releases. The question is whether the *gap* is.
 
-Hypothesis Test
+### Hypothesis Test
 
 Same hypotheses as before, on the February data:
 
-	Statement
-H0	mean(diff) = 0
-H1	mean(diff) > 0, where diff(t) = automation%_API(t) − automation%_ClaudeAI(t)
-Metric	Aug 2025	Feb 2026
-Matched tasks (n)	1,193	1,359
-Mean diff (API − Claude.ai)	+31.03 pp	+29.97 pp
-Median diff	+31.43 pp	+30.70 pp
-Std. dev. of diff	16.94 pp	19.90 pp
-t-statistic	63.26	55.52
-p-value	< .001	< .001
-Tasks with diff < 0	37 (3.1%)	91 (6.7%)
-Conclusion	Reject H0	Reject H0
+| | Statement |
+|---|---|
+| **H0** | `mean(diff) = 0` |
+| **H1** | `mean(diff) > 0`, where `diff(t) = automation%_API(t) − automation%_ClaudeAI(t)` |
 
-H0 is rejected again. 166 more tasks are matched this time, and the mean gap is about one percentage point smaller.
+| Metric | Aug 2025 | Feb 2026 |
+|---|---|---|
+| Matched tasks (n) | 1,193 | **1,359** |
+| Mean diff (API − Claude.ai) | +31.03 pp | **+29.97 pp** |
+| Median diff | +31.43 pp | +30.70 pp |
+| Std. dev. of diff | 16.94 pp | 19.90 pp |
+| t-statistic | 63.26 | **55.52** |
+| p-value | < .001 | **< .001** |
+| Tasks with diff < 0 | 37 (3.1%) | 91 (6.7%) |
+| Conclusion | Reject H0 | **Reject H0** |
 
-Automation gap distribution, Feb 2026
+H0 is rejected again. 166 more tasks are matched this time, and the mean gap is
+about one percentage point smaller.
 
-Figure 8. The February version of the Week 4–5 histogram. The distribution is still roughly bell-shaped and still sits almost entirely to the right of zero. It is a bit wider than the August one (sd 19.9 pp vs 16.9 pp) and has a longer left tail, which is the 6.7% of tasks where Claude.ai automates more.
+![Automation gap distribution, Feb 2026](figures/feb2026_automation_gap_histogram.png)
 
-Regression Model
+**Figure 8.** The February version of the Week 4–5 histogram. The distribution is still
+roughly bell-shaped and still sits almost entirely to the right of zero. It is
+a bit wider than the August one (sd 19.9 pp vs 16.9 pp) and has a longer left
+tail, which is the 6.7% of tasks where Claude.ai automates more.
 
-Each matched task appears twice, once per platform: 2,718 observations (1,359 × 2) for February, against 2,386 for August.
+### Regression Model
 
-	Aug (1)	Aug (2)	Aug (3)	Feb (1)	Feb (2)	Feb (3)
-api	31.029***	31.082***	31.847***	29.965***	29.893***	31.684***
-log_volume		0.181	−2.207***		−0.219	−3.190***
-unclassified_pct			−0.491***			−0.538***
-Intercept	43.647***	42.691***	62.616***	39.295***	40.437***	64.761***
-R²	0.475	0.475	0.555	0.427	0.428	0.526
-N	2,386	2,386	2,386	2,718	2,718	2,718
+Each matched task appears twice, once per platform: 2,718 observations
+(1,359 × 2) for February, against 2,386 for August.
+
+| | Aug (1) | Aug (2) | Aug (3) | Feb (1) | Feb (2) | Feb (3) |
+|---|---|---|---|---|---|---|
+| api | 31.029*** | 31.082*** | 31.847*** | 29.965*** | 29.893*** | 31.684*** |
+| log_volume | | 0.181 | −2.207*** | | −0.219 | −3.190*** |
+| unclassified_pct | | | −0.491*** | | | −0.538*** |
+| Intercept | 43.647*** | 42.691*** | 62.616*** | 39.295*** | 40.437*** | 64.761*** |
+| R² | 0.475 | 0.475 | 0.555 | 0.427 | 0.428 | 0.526 |
+| N | 2,386 | 2,386 | 2,386 | 2,718 | 2,718 | 2,718 |
 
 *** p < 0.01. Standard errors clustered by task.
 
 Three things to read out of this table:
 
-The api coefficient survives. It is between 29.9 and 31.8 pp in every specification in both periods, and significant at the 1% level each time.
-The small decline is not clearly real. The 95% confidence intervals of the main model overlap: [30.10, 32.07] in August and [28.80, 30.99] in February. I cannot claim the gap shrank.
-Controlling for unclassified conversations closes the difference. In model (3) the two periods are almost identical — 31.847 vs 31.684. The unclassified share rose between releases (API 17.9% → 21.6%), and once that is held constant the periods line up. So the one-point drop in models (1) and (2) looks like a measurement change, not a behavioural one.
+1. **The api coefficient survives.** It is between 29.9 and 31.8 pp in every
+   specification in both periods, and significant at the 1% level each time.
+2. **The small decline is not clearly real.** The 95% confidence intervals of
+   the main model overlap: [30.10, 32.07] in August and [28.80, 30.99] in
+   February. I cannot claim the gap shrank.
+3. **Controlling for unclassified conversations closes the difference.** In
+   model (3) the two periods are almost identical — 31.847 vs 31.684. The
+   unclassified share rose between releases (API 17.9% → 21.6%), and once that
+   is held constant the periods line up. So the one-point drop in models (1)
+   and (2) looks like a measurement change, not a behavioural one.
 
-The log_volume sign change between models (2) and (3) repeats in February (−0.219 → −3.190), the same omitted-variable-bias pattern I found in Week 6–7. Usage volume still does not explain the gap on its own.
+The `log_volume` sign change between models (2) and (3) repeats in February
+(−0.219 → −3.190), the same omitted-variable-bias pattern I found in Week 6–7.
+Usage volume still does not explain the gap on its own.
 
-Which Collaboration Types Drive the Gap
+### Which Collaboration Types Drive the Gap
 
-API coefficient per collaboration type, Feb 2026
+![API coefficient per collaboration type, Feb 2026](figures/feb2026_collab_type_coefficients.png)
 
-Figure 9. The February version of Figure 4: one regression per collaboration type, same specification as the main model, with 95% confidence intervals. The shape is the same — the API gains directive and loses task iteration and learning.
+**Figure 9.** The February version of Figure 4: one regression per
+collaboration type, same specification as the main model, with 95% confidence
+intervals. The shape is the same — the API gains directive and loses task
+iteration and learning.
 
-Collaboration type	Claude.ai (mean %)	API (mean %)	API coefficient (pp)	API higher in
-Directive	35.6	67.7	+31.4	94.6% of tasks
-Feedback loop	3.7	1.6	−1.5	5.5%
-Validation	3.1	1.7	−1.0	7.3%
-Learning	18.0	3.0	−14.2	1.7%
-Task iteration	23.2	4.4	−18.1	5.4%
+| Collaboration type | Claude.ai (mean %) | API (mean %) | API coefficient (pp) | API higher in |
+|---|---|---|---|---|
+| Directive | 35.6 | 67.7 | **+31.4** | 94.6% of tasks |
+| Feedback loop | 3.7 | 1.6 | −1.5 | 5.5% |
+| Validation | 3.1 | 1.7 | −1.0 | 7.3% |
+| Learning | 18.0 | 3.0 | **−14.2** | 1.7% |
+| Task iteration | 23.2 | 4.4 | **−18.1** | 5.4% |
 
-Replication comparison
+![Replication comparison](figures/feb2026_replication_comparison.png)
 
-Figure 10. The two periods side by side. Each pair of bars is one collaboration type: green is Aug 2025, purple is Feb 2026. The coefficients sit within about one percentage point of each other in every category — directive +31.6 vs +31.4, task iteration −18.0 vs −18.1, learning −13.3 vs −14.2.
+**Figure 10.** The two periods side by side. Each pair of bars is one
+collaboration type: green is Aug 2025, purple is Feb 2026. The coefficients sit
+within about one percentage point of each other in every category — directive
++31.6 vs +31.4, task iteration −18.0 vs −18.1, learning −13.3 vs −14.2.
 
-This is the main result of the replication. Six months apart, with different models and 166 more matched tasks, the decomposition reproduces almost exactly. The "one-shot delegation vs. working together" interpretation from Week 8 is not a feature of one particular week of data.
+This is the main result of the replication. Six months apart, with different
+models and 166 more matched tasks, the decomposition reproduces almost exactly.
+The "one-shot delegation vs. working together" interpretation from Week 8 is
+not a feature of one particular week of data.
 
-Limitations
+### Limitations
 
 The two releases are close but not identical, and three differences matter:
 
-The consumer pool changed. platform_and_product went from "Claude AI (Free and Pro)" to "Claude AI (Free, Pro, and Max)". The Max tier did not exist in the first file, so "consumer" is not exactly the same group of people.
-The business pool may have changed too. The March 2026 report states that the 1P API sample includes Claude Code. The September 2025 documentation does not mention Claude Code either way, so I cannot tell whether this is a change in the data or only a change in the documentation. If it is a change, part of the February directive share comes from coding agents rather than from ordinary business API use.
-Classification got noisier. The unclassified share rose on both platforms, and the number of tasks where Claude.ai automates more doubled from 3.1% to 6.7%. These move together, which supports the Week 8 reading that many of those exception tasks are a measurement effect. Model (3) above is the direct evidence: once the unclassified share is controlled for, the difference between the periods nearly disappears.
+1. **The consumer pool changed.** `platform_and_product` went from
+   "Claude AI (Free and Pro)" to "Claude AI (Free, Pro, and Max)". The Max tier
+   did not exist in the first file, so "consumer" is not exactly the same group
+   of people.
+2. **The business pool may have changed too.** The March 2026 report states
+   that the 1P API sample includes Claude Code. The September 2025
+   documentation does not mention Claude Code either way, so I cannot tell
+   whether this is a change in the data or only a change in the documentation.
+   If it is a change, part of the February directive share comes from coding
+   agents rather than from ordinary business API use.
+3. **Classification got noisier.** The unclassified share rose on both
+   platforms, and the number of tasks where Claude.ai automates more doubled
+   from 3.1% to 6.7%. These move together, which supports the Week 8 reading
+   that many of those exception tasks are a measurement effect. Model (3) above
+   is the direct evidence: once the unclassified share is controlled for, the
+   difference between the periods nearly disappears.
 
-Because of these, I ran the two periods separately and compared coefficients rather than pooling them into one regression.
+Because of these, I ran the two periods separately and compared coefficients
+rather than pooling them into one regression.
 
-What the February Release Makes Possible
+### What the February Release Makes Possible
 
-The newer release adds facets the first one did not have: use_case (work / personal / coursework), ai_autonomy, task_success, multitasking, human_only_ability, and estimated task times with and without AI. The most useful of these for this project is use_case, because it can test the assumption the whole design rests on — that Claude.ai traffic is consumer use and 1P API traffic is business use — rather than assuming it.
+The newer release adds facets the first one did not have: `use_case`
+(work / personal / coursework), `ai_autonomy`, `task_success`, `multitasking`,
+`human_only_ability`, and estimated task times with and without AI. The most
+useful of these for this project is `use_case`, because it can test the
+assumption the whole design rests on — that Claude.ai traffic is consumer use
+and 1P API traffic is business use — rather than assuming it.

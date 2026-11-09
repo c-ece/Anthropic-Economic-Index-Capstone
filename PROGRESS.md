@@ -117,48 +117,80 @@ H0 is rejected. Almost all tasks are on the positive side of the histogram.
 
 ## Week 9–10 — Replication on a Second Release
 
-Goal: check whether the Week 4–8 result is specific to one week of data. Everything so far came from a single release (data for Aug 4–11, 2025). If the automation gap is real, it should still be there in a different week, with different models serving the traffic.
+**Goal:** check whether the Week 4–8 result is specific to one week of data.
+Everything so far came from a single release (data for Aug 4–11, 2025). If the
+automation gap is real, it should still be there in a different week, with
+different models serving the traffic.
 
-What I did
+**What I did**
+- Downloaded the `release_2026_03_24` files (data for Feb 5–12, 2026) and added
+  the release and citation to `NOTES.md`.
+- Checked that the two releases are comparable: same 10 columns, same 5
+  collaboration labels, same `onet_task::collaboration` facet. The February
+  files are much larger (477,717 and 195,156 rows vs 100,062 and 33,794) and
+  carry 30 extra facets that did not exist in August.
+- Added a Week 9–10 section to `src/profile.py`. It reuses the Week 2–8 method without changing
+  it: same automation/augmentation buckets, same task matching rule, same
+  paired t-test, same regression with standard errors clustered by task. Only
+  the input files change.
+- The script also re-runs August 2025 through the identical code, so the two
+  periods are produced by one pipeline and not by two slightly different ones.
+  As a check, it reproduces my Week 4–8 numbers exactly (n = 1,193,
+  mean = 31.03 pp, t = 63.26, api = 31.082).
 
-Downloaded the release_2026_03_24 files (data for Feb 5–12, 2026) and added the release and citation to NOTES.md.
-Checked that the two releases are comparable: same 10 columns, same 5 collaboration labels, same onet_task::collaboration facet. The February files are much larger (477,717 and 195,156 rows vs 100,062 and 33,794) and carry 30 extra facets that did not exist in August.
+**Results**
 
-Added a Week 9–10 section to `src/profile.py`. It reuses the Week 2–8 method without changing: same automation/augmentation buckets, same task matching rule, same paired t-test, same regression with standard errors clustered by task. Only the input files change.
-The script also re-runs August 2025 through the identical code, so the two periods are produced by one pipeline and not by two slightly different ones. As a check, it reproduces my Week 4–8 numbers exactly (n = 1,193, mean = 31.03 pp, t = 63.26, api = 31.082).
+| Metric | Aug 2025 | Feb 2026 |
+|---|---|---|
+| Matched tasks | 1,193 | 1,359 |
+| Mean difference | +31.03 pp | +29.97 pp |
+| Median difference | +31.43 pp | +30.70 pp |
+| t-statistic | 63.26 | 55.52 |
+| p-value | < .001 | < .001 |
+| Tasks where Claude.ai automates more | 3.1% | 6.7% |
 
-Results
+| api coefficient | Aug 2025 | Feb 2026 |
+|---|---|---|
+| (1) api only | 31.029*** | 29.965*** |
+| (2) + log_volume | 31.082*** | 29.893*** |
+| (3) + unclassified | 31.847*** | 31.684*** |
 
-Metric	Aug 2025	Feb 2026
-Matched tasks	1,193	1,359
-Mean difference	+31.03 pp	+29.97 pp
-Median difference	+31.43 pp	+30.70 pp
-t-statistic	63.26	55.52
-p-value	< .001	< .001
-Tasks where Claude.ai automates more	3.1%	6.7%
-api coefficient	Aug 2025	Feb 2026
-(1) api only	31.029***	29.965***
-(2) + log_volume	31.082***	29.893***
-(3) + unclassified	31.847***	31.684***
-Collaboration type	Aug 2025	Feb 2026
-Directive	+31.6 pp	+31.4 pp
-Feedback loop	−0.5 pp	−1.5 pp
-Validation	−1.3 pp	−1.0 pp
-Learning	−13.3 pp	−14.2 pp
-Task iteration	−18.0 pp	−18.1 pp
+| Collaboration type | Aug 2025 | Feb 2026 |
+|---|---|---|
+| Directive | +31.6 pp | +31.4 pp |
+| Feedback loop | −0.5 pp | −1.5 pp |
+| Validation | −1.3 pp | −1.0 pp |
+| Learning | −13.3 pp | −14.2 pp |
+| Task iteration | −18.0 pp | −18.1 pp |
 
-H0 is rejected in both periods. The collaboration-type pattern repeats almost exactly: the gap is still directive, and what the API gives up is still task iteration and learning.
+H0 is rejected in both periods. The collaboration-type pattern repeats almost
+exactly: the gap is still directive, and what the API gives up is still task
+iteration and learning.
 
-What changed and what did not
+**What changed and what did not**
 
-The overall levels moved. Automation fell on both platforms (API 77.4% → 67.6%, Claude.ai 49.1% → 44.2%) and augmentation rose. But the difference between the two platforms on the same task did not move. That is the part my research question is about, and it is the part that held.
+The overall levels moved. Automation fell on both platforms (API 77.4% → 67.6%,
+Claude.ai 49.1% → 44.2%) and augmentation rose. But the *difference between the
+two platforms on the same task* did not move. That is the part my research
+question is about, and it is the part that held.
 
-Challenges
+**Challenges**
+- The two releases are not perfectly comparable. `platform_and_product` changed
+  from "Claude AI (Free and Pro)" to "Claude AI (Free, Pro, and Max)", so the
+  consumer pool is not the same population. The March 2026 report also states
+  that the 1P API sample includes Claude Code, which the September 2025
+  documentation does not mention. So the business side may have shifted too.
+- The unclassified share rose (API 17.9% → 21.6%, Claude.ai 14.9% → 16.4%), and
+  the number of tasks where Claude.ai automates more doubled (3.1% → 6.7%).
+  These two move together, which supports the Week 8 guess that many of those
+  exception tasks are a measurement effect rather than a real reversal.
+- Because of this, I did not pool the two periods into one regression. I ran
+  them separately and compared coefficients.
 
-The two releases are not perfectly comparable. platform_and_product changed from "Claude AI (Free and Pro)" to "Claude AI (Free, Pro, and Max)", so the consumer pool is not the same population. The March 2026 report also states that the 1P API sample includes Claude Code, which the September 2025 documentation does not mention. So the business side may have shifted too.
-The unclassified share rose (API 17.9% → 21.6%, Claude.ai 14.9% → 16.4%), and the number of tasks where Claude.ai automates more doubled (3.1% → 6.7%). These two move together, which supports the Week 8 guess that many of those exception tasks are a measurement effect rather than a real reversal.
-Because of this, I did not pool the two periods into one regression. I ran them separately and compared coefficients.
+**Next step**
 
-Next step
-
-The February release adds facets that did not exist in August: use_case, ai_autonomy, task_success, multitasking, human_only_ability and the two time measures. use_case in particular can test the assumption the whole project rests on — that Claude.ai is consumer use and the 1P API is business use — instead of just assuming it.
+The February release adds facets that did not exist in August: `use_case`,
+`ai_autonomy`, `task_success`, `multitasking`, `human_only_ability` and the two
+time measures. `use_case` in particular can test the assumption the whole
+project rests on — that Claude.ai is consumer use and the 1P API is business
+use — instead of just assuming it.
