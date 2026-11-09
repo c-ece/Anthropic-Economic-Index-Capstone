@@ -1,0 +1,7 @@
+,(1) api only,(2) + log_volume,(3) + unclassified
+api,29.965***,29.893***,31.684***
+log_volume,,-0.219,-3.190***
+unclassified_pct,,,-0.538***
+Intercept,39.295***,40.437***,64.761***
+R-squared,0.427,0.428,0.526
+N,2718,2718,2718

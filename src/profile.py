@@ -886,3 +886,625 @@ if len(show) > 0:
 print("\nSaved figures: collab_type_api_coefficients.png"
       + (", negative_tasks_dumbbell.png" if len(neg) > 0 else " (no negative tasks -> no dumbbell)"))
 print("Saved tables:  tables/collab_type_summary.csv, tables/negative_tasks.csv")
+
+# =============================================================================
+# WEEK 9-10  REPLICATION ON THE FEBRUARY 2026 RELEASE
+# =============================================================================
+# Research question (unchanged): do consumers (Claude.ai) and businesses
+# (1P API) use AI differently on the same tasks?
+#
+# Weeks 2-8 above used the 2025-09-15 release (data for 2025-08-04 .. 08-11).
+# This section re-runs the SAME analysis on the 2026-03-24 release (data for
+# 2026-02-05 .. 02-12) and puts the two periods side by side. The point is
+# external validity: if the gap is real and not an artifact of one week, the
+# coefficients should reproduce.
+#
+# Nothing in the method changes - same collaboration buckets, same task
+# matching rule, same paired t-test, same regression with standard errors
+# clustered by task. Only the input files change.
+#
+# Everything below is prefixed w9_ / W9_ so it does not clash with the
+# Week 2-8 names above (W9_COLLAB_TYPES, w9_build_platform_table, ...). This
+# section is self-contained: it does not read any variable defined earlier.
+#
+#   PART 1  Automation vs augmentation, global shares (both platforms)
+#   PART 2  Hypothesis test on the same-task automation gap
+#   PART 3  Regression model + robustness checks
+#   PART 4  Which collaboration types drive the gap
+#   PART 5  Side-by-side comparison with Aug 2025 (the replication table)
+#
+# Writes figures/feb2026_*.png and tables/week9_*.csv
+# =============================================================================
+ 
+import glob     # os, pandas, numpy, pyplot, smf and stats are imported above
+ 
+ 
+# --------------------------------------------------------------------------
+# CONFIGURATION
+# --------------------------------------------------------------------------
+ 
+# Resolve paths from this file's location, NOT from the shell's working
+# directory. The repo is often opened one folder above the project folder,
+# and a bare "data" would then point at the wrong place.
+_W9_HERE = os.path.dirname(os.path.abspath(__file__))     # .../src
+W9_ROOT = os.path.dirname(_W9_HERE)                          # .../<project root>
+ 
+W9_DATA_DIR = os.path.join(W9_ROOT, "data")
+W9_FIG_DIR = os.path.join(W9_ROOT, "figures")
+W9_TAB_DIR = os.path.join(W9_ROOT, "tables")
+ 
+# The two releases we compare. Keys are short labels used in every table.
+# Each entry gives the date range in the filename. The loader matches on
+# platform + date range, so a browser suffix like " (1)" or "__1_" from a
+# second download does not need renaming.
+W9_RELEASES = {
+    "2025-08": {
+        "claude": "claude_ai_2025-08-04_to_2025-08-11",
+        "api": "1p_api_2025-08-04_to_2025-08-11",
+        "release": "release_2025_09_15",
+    },
+    "2026-02": {
+        "claude": "claude_ai_2026-02-05_to_2026-02-12",
+        "api": "1p_api_2026-02-05_to_2026-02-12",
+        "release": "release_2026_03_24",
+    },
+}
+ 
+# Collaboration taxonomy. IMPORTANT: the labels contain SPACES, not
+# underscores. "feedback_loop" silently matches nothing and would drop a
+# whole automation category.
+W9_COLLAB_TYPES = ["directive", "feedback loop", "learning", "task iteration", "validation"]
+W9_AUTOMATION = ["directive", "feedback loop"]
+W9_AUGMENTATION = ["learning", "task iteration", "validation"]
+ 
+# Colors. Kept consistent with the Week 8 dumbbell figure:
+# blue = Claude.ai (consumer), orange = 1P API (business).
+C_CLAUDE = "#2a78d6"
+C_API = "#eb6834"
+# Periods get their own two hues so platform colors keep their meaning.
+C_AUG25 = "#1baf7a"
+C_FEB26 = "#6250d6"
+C_INK = "#0b0b0b"
+C_MUTED = "#52514e"
+C_GRID = "#d8d7d2"
+ 
+ 
+def w9_style_axes(ax, ylabel=None, title=None, xlabel=None):
+    """Recessive grid and axes, ink-colored text. Applied to every figure."""
+    ax.set_axisbelow(True)
+    ax.yaxis.grid(True, color=C_GRID, linewidth=0.8)
+    ax.xaxis.grid(False)
+    for side in ["top", "right"]:
+        ax.spines[side].set_visible(False)
+    for side in ["left", "bottom"]:
+        ax.spines[side].set_color(C_GRID)
+    ax.tick_params(colors=C_MUTED, labelsize=9, length=0)
+    if ylabel:
+        ax.set_ylabel(ylabel, color=C_MUTED, fontsize=10)
+    if xlabel:
+        ax.set_xlabel(xlabel, color=C_MUTED, fontsize=10)
+    if title:
+        ax.set_title(title, color=C_INK, fontsize=12, pad=12, loc="left")
+ 
+ 
+# --------------------------------------------------------------------------
+# LOADING
+# --------------------------------------------------------------------------
+ 
+def w9_find_csv(token):
+    """Find the one CSV in data/ whose name contains `token`.
+ 
+    Tolerates download suffixes, so both
+        aei_raw_1p_api_2026-02-05_to_2026-02-12.csv
+        aei_raw_1p_api_2026-02-05_to_2026-02-12 (1).csv
+    are found. Raises a readable error listing what IS in data/.
+    """
+    hits = [
+        p for p in glob.glob(os.path.join(W9_DATA_DIR, "*.csv"))
+        if token in os.path.basename(p)
+    ]
+    if not hits:
+        present = sorted(os.path.basename(p)
+                         for p in glob.glob(os.path.join(W9_DATA_DIR, "*.csv")))
+        raise FileNotFoundError(
+            f"\n  No CSV matching '{token}' in {W9_DATA_DIR}"
+            f"\n  Files currently in data/: {present if present else 'none'}"
+            f"\n  Download the release from Hugging Face and put the CSV there."
+        )
+    # Shortest name wins, so the original beats a " (1)" copy.
+    return sorted(hits, key=len)[0]
+ 
+ 
+def w9_load_release(period):
+    """Read the Claude.ai and 1P API raw CSVs for one period."""
+    cfg = W9_RELEASES[period]
+    out = {}
+    for platform in ["claude", "api"]:
+        path = w9_find_csv(cfg[platform])
+        df = pd.read_csv(path, low_memory=False)
+        out[platform] = df
+        print(
+            f"  {period}  {platform:6s}  {len(df):>8,} rows  "
+            f"{df['facet'].nunique():>3} facets  "
+            f"[{df['platform_and_product'].unique()[0]}]"
+        )
+    return out
+ 
+ 
+# --------------------------------------------------------------------------
+# PART 1 - GLOBAL W9_AUTOMATION VS W9_AUGMENTATION
+# --------------------------------------------------------------------------
+ 
+def w9_global_shares(df):
+    """Overall automation / augmentation share for one platform."""
+    collab = df[
+        (df["geography"] == "global")
+        & (df["facet"] == "collaboration")
+        & (df["variable"] == "collaboration_pct")
+    ]
+    automation = collab[collab["cluster_name"].isin(W9_AUTOMATION)]["value"].sum()
+    augmentation = collab[collab["cluster_name"].isin(W9_AUGMENTATION)]["value"].sum()
+    return automation, augmentation
+ 
+ 
+def w9_part1_shares(frames, period):
+    print(f"\n{'=' * 72}")
+    print(f"PART 1  Automation vs augmentation, global shares  ({period})")
+    print(f"{'=' * 72}")
+ 
+    shares = {}
+    for platform, label in [("claude", "Claude.ai"), ("api", "1P API")]:
+        auto, aug = w9_global_shares(frames[platform])
+        shares[label] = (auto, aug)
+        print(f"  {label:<10}  automation {auto:6.2f}%   augmentation {aug:6.2f}%")
+ 
+    # Grouped bars: two platforms x two buckets.
+    fig, ax = plt.subplots(figsize=(7, 4.6))
+    groups = ["Automation", "Augmentation"]
+    x = np.arange(len(groups))
+    width = 0.34
+ 
+    for i, (label, color) in enumerate([("Claude.ai", C_CLAUDE), ("1P API", C_API)]):
+        vals = shares[label]
+        bars = ax.bar(
+            x + (i - 0.5) * (width + 0.02), vals, width,
+            label=label, color=color, edgecolor="#fcfcfb", linewidth=2,
+        )
+        # Direct labels on every bar - only 4 bars, so no clutter, and the
+        # validator flagged a contrast WARN that labels relieve.
+        for bar, v in zip(bars, vals):
+            ax.text(
+                bar.get_x() + bar.get_width() / 2, v + 1.2, f"{v:.1f}%",
+                ha="center", va="bottom", fontsize=9, color=C_INK,
+            )
+ 
+    ax.set_xticks(x)
+    ax.set_xticklabels(groups)
+    ax.set_ylim(0, max(max(v) for v in shares.values()) * 1.22)
+    w9_style_axes(ax, ylabel="Share of conversations (%)",
+               title=f"Automation vs augmentation, {period}")
+    ax.legend(frameon=False, fontsize=9, labelcolor=C_MUTED, loc="upper right")
+    fig.savefig(os.path.join(W9_FIG_DIR, "feb2026_claude_vs_api.png"),
+                bbox_inches="tight", dpi=200)
+    plt.close(fig)
+ 
+    return shares
+ 
+ 
+# --------------------------------------------------------------------------
+# PART 2 - HYPOTHESIS TEST ON THE SAME-TASK W9_AUTOMATION GAP
+# --------------------------------------------------------------------------
+# H0: mean(diff) = 0        no difference on the same task
+# H1: mean(diff) > 0        automation share is higher on the API
+#     where diff(t) = automation%_API(t) - automation%_Claude.ai(t)
+ 
+def w9_bucket_collab_type(ct):
+    """Map a collaboration label to automation / augmentation, or drop it."""
+    if ct in W9_AUTOMATION:
+        return "automation"
+    elif ct in W9_AUGMENTATION:
+        return "augmentation"
+    else:
+        return None      # not_classified / none -> dropped
+ 
+ 
+def w9_task_automation(df):
+    """Automation % per O*NET task for one platform (global level only)."""
+    rows = df[
+        (df["geography"] == "global")
+        & (df["facet"] == "onet_task::collaboration")
+        & (df["variable"] == "onet_task_collaboration_pct")
+    ].copy()
+ 
+    # cluster_name is "<task text>::<collaboration label>"
+    rows[["task", "collab_type"]] = rows["cluster_name"].str.rsplit(
+        "::", n=1, expand=True
+    )
+    rows["bucket"] = rows["collab_type"].apply(w9_bucket_collab_type)
+    rows = rows.dropna(subset=["bucket"])
+ 
+    summary = rows.groupby(["task", "bucket"])["value"].sum().unstack(fill_value=0)
+    for col in ["automation", "augmentation"]:
+        if col not in summary.columns:
+            summary[col] = 0.0
+    return summary
+ 
+ 
+def w9_part2_ttest(frames, period, make_figure=True):
+    print(f"\n{'=' * 72}")
+    print(f"PART 2  Hypothesis test on the same-task automation gap  ({period})")
+    print(f"{'=' * 72}")
+ 
+    api_summary = w9_task_automation(frames["api"]).rename(
+        columns={"automation": "automation_api"}
+    )
+    claude_summary = w9_task_automation(frames["claude"]).rename(
+        columns={"automation": "automation_claude"}
+    )
+ 
+    # Match on the SAME task. A task only appears here if it had at least one
+    # classified conversation on that platform, so tasks that are entirely
+    # not_classified drop out on their own.
+    comparison = api_summary[["automation_api"]].merge(
+        claude_summary[["automation_claude"]], left_index=True, right_index=True
+    )
+    comparison["diff"] = comparison["automation_api"] - comparison["automation_claude"]
+ 
+    t_stat, p_value = stats.ttest_rel(
+        comparison["automation_api"],
+        comparison["automation_claude"],
+        alternative="greater",
+    )
+ 
+    n_neg = int((comparison["diff"] < 0).sum())
+    print(f"  matched tasks (n)        {len(comparison):>9,}")
+    print(f"  mean   diff (API - C.ai) {comparison['diff'].mean():>9.2f} pp")
+    print(f"  median diff              {comparison['diff'].median():>9.2f} pp")
+    print(f"  std dev of diff          {comparison['diff'].std():>9.2f} pp")
+    print(f"  t-statistic              {t_stat:>9.2f}")
+    print(f"  p-value                  {p_value:>9.3e}")
+    print(f"  tasks with diff < 0      {n_neg:>9,}  "
+          f"({n_neg / len(comparison) * 100:.1f}%)")
+    print(f"  conclusion               "
+          f"{'reject H0 -> H1 supported' if p_value < 0.05 else 'fail to reject H0'}")
+ 
+    if make_figure:
+        fig, ax = plt.subplots(figsize=(7.5, 4.6))
+        counts, _, _ = ax.hist(comparison["diff"], bins=40, color=C_CLAUDE,
+                               edgecolor="#fcfcfb", linewidth=0.8)
+        # Headroom so the annotations sit in clear space, not on the bars.
+        ax.set_ylim(0, counts.max() * 1.22)
+        mean_diff = comparison["diff"].mean()
+        # Zero is the decision line for H0 - mark it, and mark the mean.
+        ax.axvline(0, color=C_INK, linewidth=1.4)
+        ax.axvline(mean_diff, color=C_API, linewidth=2, linestyle="--")
+        ax.text(mean_diff, counts.max() * 1.16, f"  mean {mean_diff:.1f} pp",
+                color=C_API, fontsize=9, va="center", ha="left")
+        ax.text(0, counts.max() * 1.16, "H0: no difference  ",
+                color=C_MUTED, fontsize=9, ha="right", va="center")
+        w9_style_axes(
+            ax,
+            xlabel="Automation gap (1P API - Claude.ai), percentage points",
+            ylabel="Number of tasks",
+            title=f"Distribution of the same-task automation gap, {period}",
+        )
+        fig.savefig(os.path.join(W9_FIG_DIR, "feb2026_automation_gap_histogram.png"),
+                    bbox_inches="tight", dpi=200)
+        plt.close(fig)
+ 
+    result = {
+        "period": period,
+        "n_tasks": len(comparison),
+        "mean_diff": comparison["diff"].mean(),
+        "median_diff": comparison["diff"].median(),
+        "sd_diff": comparison["diff"].std(),
+        "t_stat": t_stat,
+        "p_value": p_value,
+        "pct_negative": n_neg / len(comparison) * 100,
+    }
+    return comparison, result
+ 
+ 
+# --------------------------------------------------------------------------
+# PART 3 - REGRESSION MODEL
+# --------------------------------------------------------------------------
+#   automation_pct = b0 + b1*api + b2*log_volume + e
+# One row per task x platform, so each task appears twice. Standard errors
+# are clustered by task because those two rows are not independent.
+ 
+def w9_build_platform_table(df, platform_name):
+    """One row per task: collaboration shares plus usage volume."""
+    df = df[df["geography"] == "global"]
+ 
+    collab_rows = df[
+        (df["facet"] == "onet_task::collaboration")
+        & (df["variable"] == "onet_task_collaboration_pct")
+    ].copy()
+    collab_rows[["task", "collab_type"]] = collab_rows["cluster_name"].str.rsplit(
+        "::", n=1, expand=True
+    )
+ 
+    shares = collab_rows.pivot_table(
+        index="task", columns="collab_type", values="value",
+        aggfunc="sum", fill_value=0,
+    )
+    for col in W9_COLLAB_TYPES + ["none", "not_classified"]:
+        if col not in shares.columns:
+            shares[col] = 0.0
+ 
+    out = pd.DataFrame(index=shares.index)
+    for col in W9_COLLAB_TYPES:
+        out[col] = shares[col]
+    out["automation_pct"] = shares[W9_AUTOMATION].sum(axis=1)
+    out["augmentation_pct"] = shares[W9_AUGMENTATION].sum(axis=1)
+    out["unclassified_pct"] = shares[["none", "not_classified"]].sum(axis=1)
+ 
+    counts = df[(df["facet"] == "onet_task") & (df["variable"] == "onet_task_count")]
+    counts = counts.set_index("cluster_name")["value"]
+    out["volume"] = counts.reindex(out.index)
+ 
+    out["platform"] = platform_name
+    out["api"] = 1 if platform_name == "1P API" else 0
+    return out.reset_index()
+ 
+ 
+def w9_classified_tasks(tab):
+    """Tasks with at least some classified conversations."""
+    return set(tab.loc[tab["automation_pct"] + tab["augmentation_pct"] > 0, "task"])
+ 
+ 
+def w9_build_panel(frames):
+    api_tab = w9_build_platform_table(frames["api"], "1P API")
+    claude_tab = w9_build_platform_table(frames["claude"], "Claude.ai")
+ 
+    matched = w9_classified_tasks(api_tab) & w9_classified_tasks(claude_tab)
+ 
+    panel = pd.concat([api_tab, claude_tab], ignore_index=True)
+    panel = panel[panel["task"].isin(matched)].dropna(subset=["volume"])
+    # Keep only tasks that survived on BOTH platforms (exactly 2 rows).
+    panel = panel[panel["task"].map(panel["task"].value_counts()) == 2]
+    panel["log_volume"] = np.log(panel["volume"])
+    return panel
+ 
+ 
+def w9_stars(p):
+    return "***" if p < 0.01 else "**" if p < 0.05 else "*" if p < 0.1 else ""
+ 
+ 
+def w9_part3_regression(frames, period):
+    print(f"\n{'=' * 72}")
+    print(f"PART 3  Regression model  ({period})")
+    print(f"{'=' * 72}")
+ 
+    panel = w9_build_panel(frames)
+    task_groups = pd.factorize(panel["task"])[0]
+ 
+    print(f"  observations {len(panel):,}  "
+          f"({panel['task'].nunique():,} tasks x 2 platforms)")
+    print(panel.groupby("platform")[
+        ["automation_pct", "augmentation_pct", "unclassified_pct", "volume"]
+    ].mean().round(2).to_string())
+ 
+    def fit(formula):
+        """OLS with standard errors clustered by task."""
+        return smf.ols(formula, data=panel).fit(
+            cov_type="cluster", cov_kwds={"groups": task_groups}
+        )
+ 
+    models = {
+        "(1) api only": fit("automation_pct ~ api"),
+        "(2) + log_volume": fit("automation_pct ~ api + log_volume"),
+        "(3) + unclassified": fit("automation_pct ~ api + log_volume + unclassified_pct"),
+    }
+ 
+    print("\n  MAIN MODEL: automation_pct = b0 + b1*api + b2*log_volume + e")
+    week9_main = models["(2) + log_volume"]
+    print(f"    api coefficient  {week9_main.params['api']:.3f} pp   "
+          f"SE {week9_main.bse['api']:.3f}   p {week9_main.pvalues['api']:.3e}")
+    ci = week9_main.conf_int().loc["api"]
+    print(f"    95% CI           [{ci[0]:.3f}, {ci[1]:.3f}]")
+ 
+    rows = ["api", "log_volume", "unclassified_pct", "Intercept"]
+    table = pd.DataFrame(index=rows + ["R-squared", "N"])
+    for name, m in models.items():
+        col = {}
+        for var in rows:
+            col[var] = (f"{m.params[var]:.3f}{w9_stars(m.pvalues[var])}"
+                        if var in m.params.index else "")
+        col["R-squared"] = f"{m.rsquared:.3f}"
+        col["N"] = f"{int(m.nobs)}"
+        table[name] = pd.Series(col)
+ 
+    print("\n  ROBUSTNESS CHECKS (clustered SE by task; *** p<0.01, ** p<0.05, * p<0.1)")
+    print(table.to_string())
+ 
+    coefs = {name: (m.params["api"], m.bse["api"], m.pvalues["api"])
+             for name, m in models.items()}
+    return panel, table, coefs
+ 
+ 
+# --------------------------------------------------------------------------
+# PART 4 - WHICH COLLABORATION TYPES DRIVE THE GAP
+# --------------------------------------------------------------------------
+# The regression above shows *that* the API automates more. This shows *how*:
+# one regression per collaboration type, same specification as the week9_main model.
+ 
+def w9_part4_collab_types(panel, period, make_figure=True):
+    print(f"\n{'=' * 72}")
+    print(f"PART 4  Collaboration types on the same task  ({period})")
+    print(f"{'=' * 72}")
+ 
+    task_groups = pd.factorize(panel["task"])[0]
+    wide = panel.pivot(index="task", columns="platform", values=W9_COLLAB_TYPES)
+ 
+    rows = []
+    for ct in W9_COLLAB_TYPES:
+        # statsmodels formulas can't handle spaces, so use a safe column name.
+        d = panel.rename(columns={ct: "share"})
+        m = smf.ols("share ~ api + log_volume", data=d).fit(
+            cov_type="cluster", cov_kwds={"groups": task_groups}
+        )
+        api_share = panel.loc[panel["api"] == 1, ct]
+        claude_share = panel.loc[panel["api"] == 0, ct]
+        higher = (wide[ct]["1P API"] > wide[ct]["Claude.ai"]).mean() * 100
+        rows.append({
+            "period": period,
+            "collab_type": ct,
+            "claude_mean_pct": claude_share.mean(),
+            "api_mean_pct": api_share.mean(),
+            "api_coef_pp": m.params["api"],
+            "se": m.bse["api"],
+            "p_value": m.pvalues["api"],
+            "api_higher_pct_of_tasks": higher,
+        })
+ 
+    decomp = pd.DataFrame(rows)
+    print(decomp.drop(columns=["period"]).to_string(
+        index=False,
+        formatters={
+            "claude_mean_pct": "{:.1f}".format,
+            "api_mean_pct": "{:.1f}".format,
+            "api_coef_pp": "{:+.2f}".format,
+            "se": "{:.2f}".format,
+            "p_value": "{:.2e}".format,
+            "api_higher_pct_of_tasks": "{:.1f}".format,
+        },
+    ))
+ 
+    if make_figure:
+        # Horizontal bars with 95% CI. Sorted so the story reads top to bottom.
+        d = decomp.sort_values("api_coef_pp")
+        fig, ax = plt.subplots(figsize=(7.5, 4.2))
+        y = np.arange(len(d))
+        ax.barh(y, d["api_coef_pp"], height=0.55, color=C_API,
+                edgecolor="#fcfcfb", linewidth=2)
+        ax.errorbar(d["api_coef_pp"], y, xerr=1.96 * d["se"], fmt="none",
+                    ecolor=C_INK, elinewidth=1.2, capsize=3)
+        ax.axvline(0, color=C_INK, linewidth=1.2)
+        for yi, v in zip(y, d["api_coef_pp"]):
+            off = 1.2 if v >= 0 else -1.2
+            ax.text(v + off, yi, f"{v:+.1f}", va="center",
+                    ha="left" if v >= 0 else "right",
+                    fontsize=9, color=C_INK)
+        ax.set_yticks(y)
+        ax.set_yticklabels(d["collab_type"])
+        span = d["api_coef_pp"].max() - d["api_coef_pp"].min()
+        ax.set_xlim(d["api_coef_pp"].min() - 0.22 * span,
+                    d["api_coef_pp"].max() + 0.22 * span)
+        w9_style_axes(ax, xlabel="API effect on share (percentage points)",
+                   title=f"Where the gap comes from, {period}")
+        ax.xaxis.grid(True, color=C_GRID, linewidth=0.8)
+        ax.yaxis.grid(False)
+        fig.savefig(os.path.join(W9_FIG_DIR, "feb2026_collab_type_coefficients.png"),
+                    bbox_inches="tight", dpi=200)
+        plt.close(fig)
+ 
+    return decomp
+ 
+ 
+# --------------------------------------------------------------------------
+# PART 5 - SIDE BY SIDE WITH AUG 2025 (the replication table)
+# --------------------------------------------------------------------------
+ 
+def w9_part5_compare(summaries, decomps, coef_sets):
+    print(f"\n{'=' * 72}")
+    print("PART 5  Replication: Aug 2025 vs Feb 2026")
+    print(f"{'=' * 72}")
+ 
+    summary = pd.DataFrame(summaries).set_index("period")
+    print("\n  Hypothesis test")
+    print(summary.T.to_string(float_format=lambda v: f"{v:,.3g}"))
+ 
+    print("\n  Main regression, api coefficient (pp)")
+    coef_tab = pd.DataFrame(
+        {per: {name: f"{c[0]:.3f}{w9_stars(c[2])}" for name, c in cs.items()}
+         for per, cs in coef_sets.items()}
+    )
+    print(coef_tab.to_string())
+ 
+    decomp = pd.concat(decomps, ignore_index=True)
+    pivot = decomp.pivot(index="collab_type", columns="period", values="api_coef_pp")
+    pivot = pivot.reindex(W9_COLLAB_TYPES)
+    print("\n  API effect by collaboration type (pp)")
+    print(pivot.to_string(float_format=lambda v: f"{v:+.1f}"))
+ 
+    # Paired horizontal bars, one pair per collaboration type.
+    d = pivot.loc[pivot.mean(axis=1).sort_values().index]
+    fig, ax = plt.subplots(figsize=(7.5, 4.6))
+    y = np.arange(len(d))
+    h = 0.34
+    for i, (per, color) in enumerate([("2025-08", C_AUG25), ("2026-02", C_FEB26)]):
+        bars = ax.barh(y + (0.5 - i) * (h + 0.02), d[per], height=h,
+                       label=per, color=color, edgecolor="#fcfcfb", linewidth=2)
+        for bar, v in zip(bars, d[per]):
+            off = 1.2 if v >= 0 else -1.2
+            ax.text(v + off, bar.get_y() + bar.get_height() / 2, f"{v:+.1f}",
+                    va="center", ha="left" if v >= 0 else "right",
+                    fontsize=8.5, color=C_INK)
+    ax.axvline(0, color=C_INK, linewidth=1.2)
+    ax.set_yticks(y)
+    ax.set_yticklabels(d.index)
+    span = d.values.max() - d.values.min()
+    ax.set_xlim(d.values.min() - 0.22 * span, d.values.max() + 0.22 * span)
+    w9_style_axes(ax, xlabel="API effect on share (percentage points)",
+               title="The gap reproduces six months later")
+    ax.xaxis.grid(True, color=C_GRID, linewidth=0.8)
+    ax.yaxis.grid(False)
+    ax.legend(frameon=False, fontsize=9, labelcolor=C_MUTED, loc="lower right")
+    fig.savefig(os.path.join(W9_FIG_DIR, "feb2026_replication_comparison.png"),
+                bbox_inches="tight", dpi=200)
+    plt.close(fig)
+ 
+    return summary, coef_tab, pivot
+ 
+ 
+# --------------------------------------------------------------------------
+# MAIN
+# --------------------------------------------------------------------------
+ 
+def week9_main():
+    os.makedirs(W9_FIG_DIR, exist_ok=True)
+    os.makedirs(W9_TAB_DIR, exist_ok=True)
+ 
+    print("Loading releases")
+    data = {per: w9_load_release(per) for per in W9_RELEASES}
+ 
+    summaries, decomps, coef_sets, tables = [], [], {}, {}
+ 
+    # Feb 2026 is the new period: full analysis with figures.
+    # Aug 2025 is re-run with the identical code so the two periods are
+    # comparable - no figures, those already exist from Weeks 2-8.
+    for period in ["2026-02", "2025-08"]:
+        is_new = period == "2026-02"
+        if is_new:
+            w9_part1_shares(data[period], period)
+        comparison, result = w9_part2_ttest(data[period], period, make_figure=is_new)
+        panel, table, coefs = w9_part3_regression(data[period], period)
+        decomp = w9_part4_collab_types(panel, period, make_figure=is_new)
+ 
+        summaries.append(result)
+        decomps.append(decomp)
+        coef_sets[period] = coefs
+        tables[period] = table
+        if is_new:
+            comparison.to_csv(os.path.join(W9_TAB_DIR, "week9_feb2026_task_gaps.csv"))
+            table.to_csv(os.path.join(W9_TAB_DIR, "week9_feb2026_regression.csv"))
+ 
+    # Order the summary with the earlier period first.
+    summaries = sorted(summaries, key=lambda r: r["period"])
+    decomps = sorted(decomps, key=lambda d: d["period"].iloc[0])
+    coef_sets = dict(sorted(coef_sets.items()))
+ 
+    summary, coef_tab, pivot = w9_part5_compare(summaries, decomps, coef_sets)
+ 
+    summary.to_csv(os.path.join(W9_TAB_DIR, "week9_period_summary.csv"))
+    coef_tab.to_csv(os.path.join(W9_TAB_DIR, "week9_period_coefficients.csv"))
+    pivot.to_csv(os.path.join(W9_TAB_DIR, "week9_period_collab_decomp.csv"))
+ 
+    print(f"\n  figures -> {W9_FIG_DIR}/feb2026_*.png")
+    print(f"  tables  -> {W9_TAB_DIR}/week9_*.csv")
+ 
+ 
+# profile.py runs top to bottom, so call the Week 9-10 section directly.
+week9_main()
+ 
