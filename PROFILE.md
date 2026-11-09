@@ -440,25 +440,6 @@ are two different ways of seeing the same behaviour — consumers reaching for
 Claude when the task is beyond them, businesses delegating work that is
 already routine.
 
-![Automation by ability level](figures/feb2026_human_only_ability.png)
-
-**Figure 12.** Tasks grouped by how often the user could have completed them
-alone, with mean automation share per group. Both lines are close to flat and
-the distance between them barely moves.
-
-| Could have done it alone | 1P API | Claude.ai | Gap |
-|---|---|---|---|
-| < 80% | 65.3% | 46.4% | 18.9 pp |
-| 80–85% | 70.5% | 39.9% | 30.6 pp |
-| 85–90% | 68.4% | 37.6% | 30.8 pp |
-| 90–95% | 69.2% | 37.3% | 31.9 pp |
-| 95–98% | 69.5% | 36.9% | 32.6 pp |
-| 98–100% | 69.7% | 42.2% | 27.5 pp |
-
-The gap is around 30 pp everywhere. It does not close for the hardest tasks,
-and it does not widen much for the easiest. Whatever drives it, it is not how
-difficult the task is for the person.
-
 ### Does the Gap Survive These Controls?
 
 The direct test is to put both variables into the Week 9 regression as
