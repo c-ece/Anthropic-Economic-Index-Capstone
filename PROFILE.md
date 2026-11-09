@@ -417,10 +417,6 @@ Measured over all conversations rather than matched tasks, the split is
 sharper still: the API is 74.2% work and 20.1% personal, while Claude.ai is
 45.2% work and 42.3% personal.
 
-So objection 1 does not hold. The proxy is supported by the data rather than
-only assumed, which is worth stating explicitly because every result in this
-report depends on it.
-
 It is not a clean separation, though. Half of Claude.ai use (50.5%) is still
 work, and 18.4% of API use is still personal. The two populations overlap. If
 consumer and business behaviour are mixed inside both platforms, then the true
@@ -504,9 +500,7 @@ Reading the table:
 - **The coefficient is stable.** Across all four specifications it stays
   between 30.2 and 32.0 pp, significant at the 1% level every time.
 
-Objection 2 therefore does not hold either. The two platforms are not simply
-doing different kinds of work. Holding purpose, difficulty, usage volume and
-classification quality constant, business API use is still about 30 percentage
+The two platforms are not simply doing different kinds of work. Holding purpose, difficulty, usage volume and classification quality constant, business API use is still about 30 percentage
 points more automation-heavy than consumer use on the same O*NET task.
 
 ### Limitations of This Section
