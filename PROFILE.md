@@ -483,18 +483,3 @@ Reading the table:
 
 The two platforms are not simply doing different kinds of work. Holding purpose, difficulty, usage volume and classification quality constant, business API use is still about 30 percentage
 points more automation-heavy than consumer use on the same O*NET task.
-
-### Limitations of This Section
-
-- `use_case` and `human_only_ability` are Claude's own classifications of each
-  conversation, not answers given by users. They carry the same measurement
-  uncertainty as the collaboration labels, and they have their own
-  unclassified share.
-- These two facets exist only from the 2026-01-15 release onward, so this
-  check runs on February 2026 alone. Unlike the automation gap, I cannot show
-  that it reproduces across periods.
-- Controlling for `work_pct` removes the part of the gap that runs *through*
-  task purpose. If businesses choose the API precisely because their work is
-  the automatable kind, then part of what model (2) subtracts is a real
-  consumer–business difference rather than a confounder. The 30 pp in model
-  (4) is therefore a conservative estimate.
