@@ -1507,4 +1507,346 @@ def week9_main():
  
 # profile.py runs top to bottom, so call the Week 9-10 section directly.
 week9_main()
- 
+
+ # =============================================================================
+# WEEK 11  WHY DOES THE GAP EXIST? USE_CASE AND HUMAN_ONLY_ABILITY
+# =============================================================================
+# Weeks 9-10 showed the automation gap reproduces on a second release. This
+# section uses two facets that only exist from the 2026-01-15 release onward
+# to ask two questions the August data could not answer.
+#
+#   1. Is the consumer/business proxy correct at all? The whole project assumes
+#      Claude.ai = consumers and 1P API = businesses, but never tested it.
+#      `use_case` labels every conversation work / personal / coursework, so
+#      the assumption can be checked instead of assumed.
+#
+#   2. Is the gap just "work tasks vs personal tasks"? If the API automates
+#      more only because it handles work while Claude.ai handles personal
+#      things, then the finding is about task mix, not about who the user is.
+#      Adding work_pct to the regression tests this directly.
+#
+# `human_only_ability` (could the user have done the task without Claude?)
+# is added as a second control and as a question of its own.
+#
+# Everything is prefixed w11_ / W11_. This section REUSES helpers defined in
+# the Week 9-10 section above (w9_load_release, w9_style_axes, w9_stars,
+# C_CLAUDE, C_API, W9_FIG_DIR, W9_TAB_DIR), so keep that section in place.
+#
+#   PART 1  use_case: does the consumer/business proxy hold?
+#   PART 2  human_only_ability: could the user have done it alone?
+#   PART 3  Does the api coefficient survive these two controls?
+#
+# Writes figures/feb2026_use_case.png, feb2026_human_only_ability.png,
+# feb2026_api_coefficient_controls.png and tables/week11_*.csv
+# =============================================================================
+
+W11_PERIOD = "2026-02"
+W11_COLLAB_TYPES = ["directive", "feedback loop", "learning", "task iteration", "validation"]
+W11_AUTOMATION = ["directive", "feedback loop"]
+W11_AUGMENTATION = ["learning", "task iteration", "validation"]
+
+
+def w11_wide(df, facet, variable):
+    """Task x label table of percentages for an intersection facet."""
+    rows = df[
+        (df["geography"] == "global")
+        & (df["facet"] == facet)
+        & (df["variable"] == variable)
+    ].copy()
+    split = rows["cluster_name"].str.rsplit("::", n=1, expand=True)
+    rows["task"], rows["label"] = split[0], split[1]
+    return rows.pivot_table(
+        index="task", columns="label", values="value", aggfunc="sum"
+    ).fillna(0.0)
+
+
+def w11_global_shares(df, facet, variable):
+    """Overall shares for one platform, not split by task."""
+    rows = df[
+        (df["geography"] == "global")
+        & (df["facet"] == facet)
+        & (df["variable"] == variable)
+    ]
+    return rows.groupby("cluster_name")["value"].sum()
+
+
+# -----------------------------------------------------------------------------
+# PANEL - one row per task x platform, with the Week 11 variables attached
+# -----------------------------------------------------------------------------
+
+def w11_build_panel(frames):
+    def one(df, platform_name):
+        shares = w11_wide(df, "onet_task::collaboration", "onet_task_collaboration_pct")
+        for col in W11_COLLAB_TYPES + ["none", "not_classified"]:
+            if col not in shares.columns:
+                shares[col] = 0.0
+
+        out = pd.DataFrame(index=shares.index)
+        out["automation_pct"] = shares[W11_AUTOMATION].sum(axis=1)
+        out["augmentation_pct"] = shares[W11_AUGMENTATION].sum(axis=1)
+        out["unclassified_pct"] = shares[["none", "not_classified"]].sum(axis=1)
+
+        use_case = w11_wide(df, "onet_task::use_case", "onet_task_use_case_pct")
+        for col in ["work", "personal", "coursework"]:
+            out[f"{col}_pct"] = use_case.reindex(out.index).get(col)
+
+        ability = w11_wide(
+            df, "onet_task::human_only_ability", "onet_task_human_only_ability_pct"
+        )
+        out["human_only_yes_pct"] = ability.reindex(out.index).get("yes")
+        out["human_only_no_pct"] = ability.reindex(out.index).get("no")
+
+        counts = df[
+            (df["geography"] == "global")
+            & (df["facet"] == "onet_task")
+            & (df["variable"] == "onet_task_count")
+        ]
+        out["volume"] = counts.set_index("cluster_name")["value"].reindex(out.index)
+
+        out["platform"] = platform_name
+        out["api"] = 1 if platform_name == "1P API" else 0
+        return out.reset_index()
+
+    api_tab = one(frames["api"], "1P API")
+    claude_tab = one(frames["claude"], "Claude.ai")
+
+    # Same matching rule as Weeks 6-10: classified conversations on both sides.
+    def classified(tab):
+        return set(tab.loc[tab["automation_pct"] + tab["augmentation_pct"] > 0, "task"])
+
+    matched = classified(api_tab) & classified(claude_tab)
+
+    panel = pd.concat([api_tab, claude_tab], ignore_index=True)
+    panel = panel[panel["task"].isin(matched)]
+    panel = panel.dropna(subset=["volume", "work_pct", "human_only_yes_pct"])
+    panel = panel[panel["task"].map(panel["task"].value_counts()) == 2]
+    panel["log_volume"] = np.log(panel["volume"])
+    return panel
+
+
+# -----------------------------------------------------------------------------
+# PART 1 - use_case: does the consumer/business proxy hold?
+# -----------------------------------------------------------------------------
+
+def w11_part1_use_case(frames, panel):
+    print(f"\n{'=' * 72}")
+    print("PART 1  use_case: is Claude.ai really consumer and the API business?")
+    print(f"{'=' * 72}")
+
+    print("\n  Overall shares (all conversations, global)")
+    print(f"    {'category':<16}{'Claude.ai':>11}{'1P API':>10}")
+    overall = {}
+    for platform, key in [("Claude.ai", "claude"), ("1P API", "api")]:
+        overall[platform] = w11_global_shares(frames[key], "use_case", "use_case_pct")
+    for cat in ["work", "personal", "coursework"]:
+        c_val = overall["Claude.ai"].get(cat, 0.0)
+        a_val = overall["1P API"].get(cat, 0.0)
+        print(f"    {cat:<16}{c_val:>10.2f}%{a_val:>9.2f}%")
+
+    print("\n  Same-task comparison (mean across matched tasks)")
+    print(f"    {'category':<16}{'Claude.ai':>11}{'1P API':>10}{'diff':>11}{'p':>12}")
+    rows = []
+    for cat in ["work", "personal", "coursework"]:
+        col = f"{cat}_pct"
+        a_vals = panel.loc[panel["api"] == 1, col].to_numpy()
+        c_vals = panel.loc[panel["api"] == 0, col].to_numpy()
+        t_stat, p_val = stats.ttest_rel(a_vals, c_vals)
+        print(f"    {cat:<16}{c_vals.mean():>10.1f}%{a_vals.mean():>9.1f}%"
+              f"{a_vals.mean() - c_vals.mean():>+10.1f}pp{p_val:>12.2e}")
+        rows.append({
+            "category": cat,
+            "claude_pct": c_vals.mean(), "api_pct": a_vals.mean(),
+            "diff_pp": a_vals.mean() - c_vals.mean(),
+            "t_stat": t_stat, "p_value": p_val,
+        })
+    summary = pd.DataFrame(rows)
+
+    # Grouped bars, same platform colors as every other figure in this file.
+    fig, ax = plt.subplots(figsize=(7.2, 4.6))
+    cats = ["work", "personal", "coursework"]
+    x = np.arange(len(cats))
+    width = 0.34
+    for i, (label, color, key) in enumerate(
+        [("Claude.ai", C_CLAUDE, "claude_pct"), ("1P API", C_API, "api_pct")]
+    ):
+        vals = summary[key].to_numpy()
+        bars = ax.bar(x + (i - 0.5) * (width + 0.02), vals, width,
+                      label=label, color=color, edgecolor="#fcfcfb", linewidth=2)
+        for bar, v in zip(bars, vals):
+            ax.text(bar.get_x() + bar.get_width() / 2, v + 1.0, f"{v:.1f}%",
+                    ha="center", va="bottom", fontsize=9, color=C_INK)
+    ax.set_xticks(x)
+    ax.set_xticklabels(["Work", "Personal", "Coursework"])
+    ax.set_ylim(0, max(summary[["claude_pct", "api_pct"]].max()) * 1.25)
+    w9_style_axes(ax, ylabel="Share of conversations (%)",
+                  title="What the two platforms are used for, Feb 2026")
+    ax.legend(frameon=False, fontsize=9, labelcolor=C_MUTED, loc="upper right")
+    fig.savefig(os.path.join(W9_FIG_DIR, "feb2026_use_case.png"),
+                bbox_inches="tight", dpi=200)
+    plt.close(fig)
+
+    return summary
+
+
+# -----------------------------------------------------------------------------
+# PART 2 - human_only_ability: could the user have done it without Claude?
+# -----------------------------------------------------------------------------
+
+def w11_part2_ability(panel):
+    print(f"\n{'=' * 72}")
+    print("PART 2  human_only_ability: could the user have done it alone?")
+    print(f"{'=' * 72}")
+
+    rows = []
+    print(f"\n    {'answer':<16}{'Claude.ai':>11}{'1P API':>10}{'diff':>11}{'p':>12}")
+    for label, col in [("yes", "human_only_yes_pct"), ("no", "human_only_no_pct")]:
+        a_vals = panel.loc[panel["api"] == 1, col].to_numpy()
+        c_vals = panel.loc[panel["api"] == 0, col].to_numpy()
+        t_stat, p_val = stats.ttest_rel(a_vals, c_vals)
+        print(f"    {label:<16}{c_vals.mean():>10.1f}%{a_vals.mean():>9.1f}%"
+              f"{a_vals.mean() - c_vals.mean():>+10.1f}pp{p_val:>12.2e}")
+        rows.append({"answer": label, "claude_pct": c_vals.mean(),
+                     "api_pct": a_vals.mean(),
+                     "diff_pp": a_vals.mean() - c_vals.mean(),
+                     "t_stat": t_stat, "p_value": p_val})
+    summary = pd.DataFrame(rows)
+
+    # Does the automation gap close for tasks people could NOT do alone?
+    # Bin tasks by their human_only "yes" share and plot mean automation.
+    edges = [0, 80, 85, 90, 95, 98, 100.01]
+    names = ["<80", "80–85", "85–90", "90–95", "95–98", "98–100"]
+    binned = panel.copy()
+    binned["bin"] = pd.cut(binned["human_only_yes_pct"], edges, right=False,
+                           labels=names)
+    grid = binned.groupby(["bin", "platform"], observed=True).agg(
+        n=("task", "size"), automation=("automation_pct", "mean")
+    ).reset_index()
+
+    print("\n  Mean automation % by how often the user could have done it alone")
+    print(grid.pivot(index="bin", columns="platform", values="automation")
+          .round(1).to_string())
+
+    fig, ax = plt.subplots(figsize=(7.2, 4.6))
+    x = np.arange(len(names))
+    for platform, color in [("Claude.ai", C_CLAUDE), ("1P API", C_API)]:
+        sub = grid[grid["platform"] == platform].set_index("bin").reindex(names)
+        ax.plot(x, sub["automation"], color=color, linewidth=2, marker="o",
+                markersize=8, markeredgecolor="#fcfcfb", markeredgewidth=2,
+                label=platform)
+    # Label the ends only, so the line stays readable.
+    for platform, color in [("Claude.ai", C_CLAUDE), ("1P API", C_API)]:
+        sub = grid[grid["platform"] == platform].set_index("bin").reindex(names)
+        ax.text(x[-1] + 0.12, sub["automation"].iloc[-1],
+                f"{sub['automation'].iloc[-1]:.0f}%", color=C_INK,
+                fontsize=9, va="center")
+    ax.set_xticks(x)
+    ax.set_xticklabels(names)
+    ax.set_xlim(-0.4, len(names) - 0.2)
+    ax.set_ylim(0, 100)
+    w9_style_axes(
+        ax,
+        xlabel="Share of the task's conversations the user could have done alone (%)",
+        ylabel="Automation share (%)",
+        title="The gap does not close at any ability level",
+    )
+    ax.legend(frameon=False, fontsize=9, labelcolor=C_MUTED, loc="center right")
+    fig.savefig(os.path.join(W9_FIG_DIR, "feb2026_human_only_ability.png"),
+                bbox_inches="tight", dpi=200)
+    plt.close(fig)
+
+    return summary, grid
+
+
+# -----------------------------------------------------------------------------
+# PART 3 - does the api coefficient survive these controls?
+# -----------------------------------------------------------------------------
+
+def w11_part3_controls(panel):
+    print(f"\n{'=' * 72}")
+    print("PART 3  Does the api coefficient survive work_pct and ability?")
+    print(f"{'=' * 72}")
+
+    groups = pd.factorize(panel["task"])[0]
+
+    def fit(formula):
+        return smf.ols(formula, data=panel).fit(
+            cov_type="cluster", cov_kwds={"groups": groups}
+        )
+
+    base = "automation_pct ~ api + log_volume + unclassified_pct"
+    models = {
+        "(1) Week 9 model": fit(base),
+        "(2) + work_pct": fit(base + " + work_pct"),
+        "(3) + ability": fit(base + " + human_only_yes_pct"),
+        "(4) + both": fit(base + " + work_pct + human_only_yes_pct"),
+    }
+
+    rows = ["api", "work_pct", "human_only_yes_pct", "log_volume",
+            "unclassified_pct", "Intercept"]
+    table = pd.DataFrame(index=rows + ["R-squared", "N"])
+    for name, m in models.items():
+        col = {v: (f"{m.params[v]:.3f}{w9_stars(m.pvalues[v])}"
+                   if v in m.params.index else "") for v in rows}
+        col["R-squared"] = f"{m.rsquared:.3f}"
+        col["N"] = f"{int(m.nobs)}"
+        table[name] = pd.Series(col)
+
+    print("\n  (clustered SE by task; *** p<0.01, ** p<0.05, * p<0.1)")
+    print(table.to_string())
+
+    # Visual version: the api coefficient with 95% CI in each specification.
+    fig, ax = plt.subplots(figsize=(7.2, 3.8))
+    names = list(models)
+    y = np.arange(len(names))[::-1]
+    coefs = np.array([models[n].params["api"] for n in names])
+    errs = np.array([1.96 * models[n].bse["api"] for n in names])
+    ax.errorbar(coefs, y, xerr=errs, fmt="o", color=C_API, markersize=9,
+                markeredgecolor="#fcfcfb", markeredgewidth=2,
+                ecolor=C_INK, elinewidth=1.4, capsize=4)
+    for yi, v in zip(y, coefs):
+        ax.text(v, yi + 0.22, f"{v:.1f}", ha="center", fontsize=9, color=C_INK)
+    ax.set_yticks(y)
+    ax.set_yticklabels(names)
+    ax.set_xlim(0, max(coefs + errs) * 1.15)
+    ax.set_ylim(-0.6, len(names) - 0.4)
+    w9_style_axes(ax, xlabel="api coefficient (percentage points)",
+                  title="The gap is not explained by task purpose or difficulty")
+    ax.xaxis.grid(True, color=C_GRID, linewidth=0.8)
+    ax.yaxis.grid(False)
+    fig.savefig(os.path.join(W9_FIG_DIR, "feb2026_api_coefficient_controls.png"),
+                bbox_inches="tight", dpi=200)
+    plt.close(fig)
+
+    return table
+
+
+# -----------------------------------------------------------------------------
+# MAIN
+# -----------------------------------------------------------------------------
+
+def week11_main():
+    print("\nWeek 11: loading the February 2026 release")
+    frames = w9_load_release(W11_PERIOD)
+
+    panel = w11_build_panel(frames)
+    print(f"\n  panel: {len(panel):,} observations "
+          f"({panel['task'].nunique():,} tasks x 2 platforms)")
+    print(panel.groupby("platform")[
+        ["automation_pct", "work_pct", "personal_pct", "human_only_yes_pct"]
+    ].mean().round(2).to_string())
+
+    use_case = w11_part1_use_case(frames, panel)
+    ability, ability_grid = w11_part2_ability(panel)
+    controls = w11_part3_controls(panel)
+
+    use_case.to_csv(os.path.join(W9_TAB_DIR, "week11_use_case.csv"), index=False)
+    ability.to_csv(os.path.join(W9_TAB_DIR, "week11_human_only_ability.csv"), index=False)
+    ability_grid.to_csv(os.path.join(W9_TAB_DIR, "week11_ability_bins.csv"), index=False)
+    controls.to_csv(os.path.join(W9_TAB_DIR, "week11_controls_regression.csv"))
+
+    print(f"\n  figures -> {W9_FIG_DIR}/feb2026_use_case.png, "
+          f"feb2026_human_only_ability.png, feb2026_api_coefficient_controls.png")
+    print(f"  tables  -> {W9_TAB_DIR}/week11_*.csv")
+
+
+week11_main()

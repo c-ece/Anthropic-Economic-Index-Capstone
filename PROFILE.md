@@ -391,3 +391,147 @@ The newer release adds facets the first one did not have: `use_case`
 useful of these for this project is `use_case`, because it can test the
 assumption the whole design rests on — that Claude.ai traffic is consumer use
 and 1P API traffic is business use — rather than assuming it.
+
+## Ruling Out the Alternative Explanation (Feb 2026)
+
+The replication in the previous section shows the automation gap is stable.
+It does not show *why* the gap exists. Two objections were still open, and
+both can now be tested with facets that the August release did not have.
+
+**Objection 1 — the proxy might be wrong.** This whole project treats
+Claude.ai as consumer use and the 1P API as business use. That is an
+assumption. Nothing in the August data could check it.
+
+**Objection 2 — it might be about the task, not the user.** Maybe the API
+automates more only because it handles work tasks while Claude.ai handles
+personal ones, and work tasks are easier to automate. If so, the finding is
+about task mix and not about who the user is.
+
+The February release adds `use_case` (work / personal / coursework) and
+`human_only_ability` (could the user have completed the task without Claude?).
+The Week 11 section of `src/profile.py` uses both, on the same 1,359 matched
+tasks and the same panel as the Week 9 regression.
+
+### Is the Consumer/Business Proxy Correct?
+
+![What the two platforms are used for](figures/feb2026_use_case.png)
+
+**Figure 11.** Purpose of use on the same tasks. The API is far more
+work-oriented; Claude.ai carries most of the personal and coursework use.
+
+| Use case | Claude.ai | 1P API | Difference | p |
+|---|---|---|---|---|
+| Work | 50.5% | 65.2% | **+14.6 pp** | < .001 |
+| Personal | 34.8% | 18.4% | **−16.3 pp** | < .001 |
+| Coursework | 8.0% | 5.7% | −2.3 pp | < .001 |
+
+Measured over all conversations rather than matched tasks, the split is
+sharper still: the API is 74.2% work and 20.1% personal, while Claude.ai is
+45.2% work and 42.3% personal.
+
+So objection 1 does not hold. The proxy is supported by the data rather than
+only assumed, which is worth stating explicitly because every result in this
+report depends on it.
+
+It is not a clean separation, though. Half of Claude.ai use (50.5%) is still
+work, and 18.4% of API use is still personal. The two populations overlap. If
+consumer and business behaviour are mixed inside both platforms, then the true
+difference between consumers and businesses is probably **larger** than the
+30 pp I measure, not smaller — mixing pulls the two groups toward each other.
+
+### Could the User Have Done It Without Claude?
+
+| Could the user have done it alone? | Claude.ai | 1P API | Difference | p |
+|---|---|---|---|---|
+| Yes | 90.8% | 94.3% | +3.5 pp | < .001 |
+| No | 5.8% | 2.3% | −3.5 pp | < .001 |
+
+On the same task, businesses are more often handing over work the person could
+already have done themselves. Consumers use Claude for things they could not
+do alone about two and a half times as often.
+
+This is a separate measure from collaboration type, and it points the same way
+as Week 8: the high `learning` share on Claude.ai and the high `no` share here
+are two different ways of seeing the same behaviour — consumers reaching for
+Claude when the task is beyond them, businesses delegating work that is
+already routine.
+
+![Automation by ability level](figures/feb2026_human_only_ability.png)
+
+**Figure 12.** Tasks grouped by how often the user could have completed them
+alone, with mean automation share per group. Both lines are close to flat and
+the distance between them barely moves.
+
+| Could have done it alone | 1P API | Claude.ai | Gap |
+|---|---|---|---|
+| < 80% | 65.3% | 46.4% | 18.9 pp |
+| 80–85% | 70.5% | 39.9% | 30.6 pp |
+| 85–90% | 68.4% | 37.6% | 30.8 pp |
+| 90–95% | 69.2% | 37.3% | 31.9 pp |
+| 95–98% | 69.5% | 36.9% | 32.6 pp |
+| 98–100% | 69.7% | 42.2% | 27.5 pp |
+
+The gap is around 30 pp everywhere. It does not close for the hardest tasks,
+and it does not widen much for the easiest. Whatever drives it, it is not how
+difficult the task is for the person.
+
+### Does the Gap Survive These Controls?
+
+The direct test is to put both variables into the Week 9 regression as
+controls and see what happens to the api coefficient:
+
+    automation_pct = β0 + β1·api + β2·log_volume + β3·unclassified_pct
+                     + β4·work_pct + β5·human_only_yes_pct + ε
+
+Same panel as before — 2,718 observations, 1,359 tasks × 2 platforms, standard
+errors clustered by task.
+
+| | (1) Week 9 | (2) + work | (3) + ability | (4) + both |
+|---|---|---|---|---|
+| api | 31.684*** | **30.161*** | 31.974*** | **30.410*** |
+| work_pct | | 0.099*** | | 0.098*** |
+| human_only_yes_pct | | | −0.086* | −0.071 |
+| log_volume | −3.190*** | −3.083*** | −3.212*** | −3.102*** |
+| unclassified_pct | −0.538*** | −0.516*** | −0.537*** | −0.515*** |
+| Intercept | 64.761*** | 58.845*** | 72.713*** | 65.422*** |
+| R² | 0.526 | 0.543 | 0.527 | 0.543 |
+| N | 2,718 | 2,718 | 2,718 | 2,718 |
+
+*** p < 0.01, * p < 0.1. Standard errors clustered by task.
+
+![api coefficient across specifications](figures/feb2026_api_coefficient_controls.png)
+
+**Figure 13.** The api coefficient with 95% confidence intervals in each
+specification. It stays near 30 pp whatever is controlled for.
+
+Reading the table:
+
+- **Task purpose matters, but only a little.** `work_pct` is significant: a
+  task that is 10 pp more work-oriented is about 1 pp more automated. Adding
+  it moves the api coefficient from 31.68 to 30.16. So purpose explains about
+  1.5 pp of a 31.7 pp gap and leaves 30 pp unexplained.
+- **Difficulty explains nothing.** `human_only_ability` is marginal on its own
+  (p < 0.1) and not significant once `work_pct` is in the model. Model (3)
+  even nudges the api coefficient slightly up.
+- **The coefficient is stable.** Across all four specifications it stays
+  between 30.2 and 32.0 pp, significant at the 1% level every time.
+
+Objection 2 therefore does not hold either. The two platforms are not simply
+doing different kinds of work. Holding purpose, difficulty, usage volume and
+classification quality constant, business API use is still about 30 percentage
+points more automation-heavy than consumer use on the same O*NET task.
+
+### Limitations of This Section
+
+- `use_case` and `human_only_ability` are Claude's own classifications of each
+  conversation, not answers given by users. They carry the same measurement
+  uncertainty as the collaboration labels, and they have their own
+  unclassified share.
+- These two facets exist only from the 2026-01-15 release onward, so this
+  check runs on February 2026 alone. Unlike the automation gap, I cannot show
+  that it reproduces across periods.
+- Controlling for `work_pct` removes the part of the gap that runs *through*
+  task purpose. If businesses choose the API precisely because their work is
+  the automatable kind, then part of what model (2) subtracts is a real
+  consumer–business difference rather than a confounder. The 30 pp in model
+  (4) is therefore a conservative estimate.

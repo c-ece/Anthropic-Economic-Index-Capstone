@@ -194,3 +194,89 @@ The February release adds facets that did not exist in August: `use_case`,
 time measures. `use_case` in particular can test the assumption the whole
 project rests on — that Claude.ai is consumer use and the 1P API is business
 use — instead of just assuming it.
+
+## Week 11 — Why Does the Gap Exist? Use Case and Ability
+
+**Goal:** test the two biggest objections to the Week 4–10 result. First, the
+whole project assumes Claude.ai is consumer use and the 1P API is business
+use, and I had never checked that. Second, someone could argue the gap is not
+about *who* the user is but about *what* they are doing — the API handles work
+tasks, Claude.ai handles personal ones, and work tasks are simply easier to
+automate. The February release has two facets that can answer both.
+
+**What I did**
+- Added a Week 11 section to `src/profile.py` using two facets that do not
+  exist in the August release: `use_case` (work / personal / coursework) and
+  `human_only_ability` (could the user have completed the task without
+  Claude?).
+- Compared both facets across platforms on the same 1,359 matched tasks, with
+  paired t-tests, exactly as in Week 4–5.
+- Grouped tasks by their `human_only_ability` share and plotted mean
+  automation per group, to see whether the gap closes anywhere.
+- Extended the Week 9 regression with the two new variables as controls:
+  `automation_pct = β0 + β1·api + β2·log_volume + β3·unclassified_pct + β4·work_pct + β5·human_only_yes_pct + ε`,
+  standard errors still clustered by task, 2,718 observations.
+
+**Results — the proxy holds**
+
+| Use case | Claude.ai | 1P API | Difference |
+|---|---|---|---|
+| Work | 50.5% | 65.2% | **+14.6 pp** |
+| Personal | 34.8% | 18.4% | **−16.3 pp** |
+| Coursework | 8.0% | 5.7% | −2.3 pp |
+
+All three differences are significant at p < .001. Across all conversations
+rather than matched tasks the split is even sharper: the API is 74.2% work,
+Claude.ai is 45.2% work and 42.3% personal. So the consumer/business proxy is
+supported by the data instead of only assumed.
+
+**Results — ability**
+
+| Could the user have done it alone? | Claude.ai | 1P API | Difference |
+|---|---|---|---|
+| Yes | 90.8% | 94.3% | +3.5 pp |
+| No | 5.8% | 2.3% | −3.5 pp |
+
+Businesses hand over work people could already do themselves. Consumers use
+Claude for things they could not do alone about two and a half times as often.
+This matches the high `learning` share I found in Week 8, from a completely
+separate measure.
+
+Grouping tasks by this share shows the automation gap is about 30 pp in every
+group, from tasks under 80% up to tasks at 98–100%. It does not close anywhere.
+
+**Results — the regression**
+
+| | (1) Week 9 | (2) + work | (3) + ability | (4) + both |
+|---|---|---|---|---|
+| api | 31.684*** | **30.161*** | 31.974*** | **30.410*** |
+| work_pct | | 0.099*** | | 0.098*** |
+| human_only_yes_pct | | | −0.086* | −0.071 |
+| R² | 0.526 | 0.543 | 0.527 | 0.543 |
+| N | 2,718 | 2,718 | 2,718 | 2,718 |
+
+*** p < 0.01, * p < 0.1. Clustered SE by task.
+
+Controlling for how work-oriented a task is moves the api coefficient from
+31.68 to 30.16. Task purpose explains about 1.5 pp of the gap and leaves 30 pp
+unexplained. `human_only_ability` is marginal on its own and not significant
+once `work_pct` is in the model. The objection is real but small: the gap is
+not a task-mix artifact.
+
+**Challenges**
+- The proxy is directional, not clean. Claude.ai is still 50.5% work and the
+  API is still 18.4% personal, so the two groups overlap. If consumer and
+  business use are mixed inside both platforms, the true consumer–business
+  difference is probably *larger* than the 30 pp I measure, not smaller.
+- `use_case` and `human_only_ability` are Claude's own classifications of the
+  conversation, not answers from the users, so they carry the same measurement
+  uncertainty as the collaboration labels.
+- I kept these models on February 2026 only. The August release has neither
+  facet, so this check cannot be repeated across periods.
+
+**Where the argument stands now**
+
+Week 6–7 showed there is a gap. Week 8 showed it comes from directive use.
+Week 9–10 showed it reproduces six months later. Week 11 rules out the
+strongest alternative explanation: the two platforms are not simply doing
+different kinds of work.
