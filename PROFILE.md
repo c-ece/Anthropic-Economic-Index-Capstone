@@ -313,14 +313,11 @@ Each matched task appears twice, once per platform: 2,718 observations
 
 *** p < 0.01. Standard errors clustered by task.
 
-Three things to read out of this table:
+Two things to read out of this table:
 
 1. **The api coefficient survives.** It is between 29.9 and 31.8 pp in every
    specification in both periods, and significant at the 1% level each time.
-2. **The small decline is not clearly real.** The 95% confidence intervals of
-   the main model overlap: [30.10, 32.07] in August and [28.80, 30.99] in
-   February. I cannot claim the gap shrank.
-3. **Controlling for unclassified conversations closes the difference.** In
+2. **Controlling for unclassified conversations closes the difference.** In
    model (3) the two periods are almost identical — 31.847 vs 31.684. The
    unclassified share rose between releases (API 17.9% → 21.6%), and once that
    is held constant the periods line up. So the one-point drop in models (1)
