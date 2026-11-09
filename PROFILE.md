@@ -400,7 +400,7 @@ The February release adds `use_case` (work / personal / coursework) and
 The Week 11 section of `src/profile.py` uses both, on the same 1,359 matched
 tasks and the same panel as the Week 9 regression.
 
-### Is the Consumer/Business Proxy Correct?
+
 
 ![What the two platforms are used for](figures/feb2026_use_case.png)
 
